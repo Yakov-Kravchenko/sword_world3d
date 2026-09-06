@@ -1,0 +1,45 @@
+{
+  "class": "HeroData",
+  "comment": "Четыре предопределённых героя (03-characters.md разд.2).",
+  "entries": [
+    {"id": "hald", "display_name": "Хальд Вересковый", "archetype": "Латник",
+     "role": "Танк, контроль, защита союзников", "hit_die": 10, "primary_stat": "str",
+     "save_proficiencies": ["str", "con"],
+     "base_stats": {"str": 16, "dex": 10, "con": 15, "int": 9, "wis": 12, "cha": 10},
+     "starting_equipment": ["sword_notched", "shield_worn", "armor_chainmail"],
+     "starting_inventory": ["torch", "torch", "potion_minor"],
+     "abilities": ["taunt", "second_wind", "shield_wall", "crushing_blow"],
+     "tint": "c9c2b0",
+     "house_description": "Дом с кузней во дворе и стойкой для щита у входа."},
+
+    {"id": "irma", "display_name": "Ирма Тень", "archetype": "Ловчая",
+     "role": "Дальний урон, разведка, ловушки", "hit_die": 8, "primary_stat": "dex",
+     "save_proficiencies": ["dex", "int"],
+     "base_stats": {"str": 10, "dex": 17, "con": 13, "int": 13, "wis": 12, "cha": 8},
+     "starting_equipment": ["shortbow", "armor_leather"],
+     "starting_inventory": ["dagger", "torch", "bandage", "bandage"],
+     "abilities": ["stealth", "aimed_shot", "short_step"],
+     "tint": "6f8f6a",
+     "house_description": "Охотничий сруб на сваях, под потолком сохнут травы и тетивы."},
+
+    {"id": "vern", "display_name": "Верн Безлицензионный", "archetype": "Чернокнижник",
+     "role": "Урон по площади, контроль, дебаффы", "hit_die": 6, "primary_stat": "int",
+     "casting_stat": "int", "save_proficiencies": ["int", "wis"],
+     "base_stats": {"str": 8, "dex": 12, "con": 12, "int": 17, "wis": 12, "cha": 11},
+     "starting_equipment": ["staff_charred", "armor_robe"],
+     "starting_inventory": ["torch", "torch", "torch"],
+     "starting_spells": ["fire_ray", "ice_grip", "mind_blade", "burning_hands", "shield_spell", "doom_mark"],
+     "tint": "6a5a8f",
+     "house_description": "Башенка с протекающей крышей; на столе гримуар и три немытые чашки."},
+
+    {"id": "mara", "display_name": "Мара с Топей", "archetype": "Знахарка",
+     "role": "Лечение, снятие статусов, священный урон", "hit_die": 8, "primary_stat": "wis",
+     "casting_stat": "wis", "save_proficiencies": ["wis", "cha"],
+     "base_stats": {"str": 11, "dex": 10, "con": 14, "int": 12, "wis": 17, "cha": 13},
+     "starting_equipment": ["club_banded", "armor_gambeson", "charm_wood"],
+     "starting_inventory": ["bandage", "bandage", "antidote"],
+     "starting_spells": ["faith_spark", "minor_heal", "light_ritual", "cure_wounds", "cleanse", "blessing"],
+     "tint": "8f7a5a",
+     "house_description": "Изба на краю болота: сушёные грибы, склянки и вечно тёплая печь."}
+  ]
+}

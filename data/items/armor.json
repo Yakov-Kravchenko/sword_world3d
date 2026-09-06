@@ -1,0 +1,41 @@
+{
+  "class": "ArmorData",
+  "entries": [
+    {"id": "armor_chainmail", "display_name": "Кольчуга", "category": "armor", "weight": 9.0,
+     "grid_size": [2, 3], "base_value": 160, "ac_base": 14, "dex_limit": 2, "slot": "body",
+     "allowed_affix_pools": ["armor"], "tint": "70757c"},
+
+    {"id": "armor_leather", "display_name": "Кожаная броня", "category": "armor", "weight": 4.0,
+     "grid_size": [2, 2], "base_value": 90, "ac_base": 11, "dex_limit": 99, "slot": "body",
+     "allowed_affix_pools": ["armor"], "tint": "6b4f33"},
+
+    {"id": "armor_gambeson", "display_name": "Стёганка", "category": "armor", "weight": 6.0,
+     "grid_size": [2, 3], "base_value": 110, "ac_base": 12, "dex_limit": 2, "slot": "body",
+     "allowed_affix_pools": ["armor"], "tint": "7d6f57"},
+
+    {"id": "armor_robe", "display_name": "Мантия", "category": "armor", "weight": 1.5,
+     "grid_size": [2, 2], "base_value": 60, "ac_base": 10, "dex_limit": 99, "slot": "body",
+     "allowed_affix_pools": ["armor", "focus"], "tint": "42384a"},
+
+    {"id": "armor_scale", "display_name": "Чешуйчатый доспех", "category": "armor", "weight": 11.0,
+     "grid_size": [2, 3], "base_value": 260, "ac_base": 15, "dex_limit": 2, "slot": "body",
+     "stealth_disadvantage": true, "allowed_affix_pools": ["armor"], "tint": "5f6a5c"},
+
+    {"id": "armor_plate", "display_name": "Латный доспех", "category": "armor", "weight": 20.0,
+     "grid_size": [3, 3], "base_value": 900, "ac_base": 17, "dex_limit": 0, "min_str": 13,
+     "slot": "body", "absorb": 1, "stealth_disadvantage": true, "rarity": "rare",
+     "allowed_affix_pools": ["armor"], "tint": "8f959c"},
+
+    {"id": "shield_worn", "display_name": "Потрёпанный щит", "category": "armor", "weight": 3.0,
+     "grid_size": [2, 2], "base_value": 50, "ac_base": 0, "ac_bonus": 2, "slot": "off_hand",
+     "allowed_affix_pools": ["armor"], "tint": "6a5b46"},
+
+    {"id": "shield_tower", "display_name": "Башенный щит", "category": "armor", "weight": 6.0,
+     "grid_size": [2, 3], "base_value": 320, "ac_bonus": 3, "slot": "off_hand", "absorb": 1,
+     "rarity": "uncommon", "allowed_affix_pools": ["armor"], "tint": "5c6470"},
+
+    {"id": "charm_wood", "display_name": "Деревянный оберег", "category": "armor", "weight": 0.2,
+     "grid_size": [1, 1], "base_value": 70, "slot": "trinket", "modifiers": {"saves": 1},
+     "tint": "7a6242", "description": "+1 ко всем спасброскам."}
+  ]
+}

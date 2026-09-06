@@ -1,0 +1,12 @@
+{
+  "class": "StatusData",
+  "entries": [
+    {"id": "shield_arcane", "display_name": "Щит", "description": "+5 КБ до начала следующего хода.",
+     "duration_rounds": 1, "is_debuff": false, "modifiers": {"ac": 5}, "tags": ["buff"]},
+    {"id": "hasted", "display_name": "Ускорение", "description": "Скорость удвоена.",
+     "duration_rounds": 3, "is_debuff": false, "modifiers": {"speed_mult": 2.0}, "tags": ["buff"]},
+    {"id": "webbed", "display_name": "Паутина", "description": "Обездвижен, пока не вырвется.",
+     "duration_rounds": 3, "blocks_movement": true, "incoming_have_advantage": true,
+     "save_stat": "str", "save_dc": 13, "tags": ["control"]}
+  ]
+}

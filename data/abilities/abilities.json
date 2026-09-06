@@ -1,0 +1,25 @@
+{
+  "class": "AbilityData",
+  "entries": [
+    {"id": "taunt", "hero_id": "hald", "display_name": "Провокация", "cost": "bonus",
+     "target_kind": "enemy", "range_cells": 3,
+     "description": "Спасбросок МДР врага; провал — его приоритет смещается на Хальда."},
+    {"id": "second_wind", "hero_id": "hald", "display_name": "Второе дыхание", "cost": "bonus",
+     "uses_per_rest": 1, "target_kind": "self",
+     "description": "Восстановить 1d10 + уровень HP."},
+    {"id": "shield_wall", "hero_id": "hald", "display_name": "Стена щитов", "cost": "action",
+     "uses_per_rest": 2, "target_kind": "self",
+     "description": "+4 КБ себе и союзникам рядом, скорость 0 до следующего хода."},
+    {"id": "crushing_blow", "hero_id": "hald", "display_name": "Сокрушающий удар",
+     "cost": "action", "target_kind": "enemy",
+     "description": "Атака с -2; при попадании — толчок и спасбросок СИЛ от падения."},
+
+    {"id": "stealth", "hero_id": "irma", "display_name": "Скрытность", "cost": "bonus",
+     "target_kind": "self",
+     "description": "Проверка ЛОВ против восприятия врагов; в темноте с преимуществом."},
+    {"id": "aimed_shot", "hero_id": "irma", "display_name": "Прицеливание", "cost": "action",
+     "target_kind": "self", "description": "+2 к следующей дальней атаке."},
+    {"id": "short_step", "hero_id": "irma", "display_name": "Отскок", "cost": "bonus",
+     "target_kind": "self", "description": "Отход на 3 клетки без провокации."}
+  ]
+}

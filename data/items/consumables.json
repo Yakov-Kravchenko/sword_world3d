@@ -1,0 +1,38 @@
+{
+  "class": "ConsumableData",
+  "entries": [
+    {"id": "potion_minor", "display_name": "Малое зелье лечения", "category": "consumable",
+     "weight": 0.3, "base_value": 55, "stackable": true, "max_stack": 5, "effect": "heal",
+     "dice": "2d4+2", "use_time": "bonus", "limit_group": "potion", "tint": "b8354a"},
+
+    {"id": "potion_greater", "display_name": "Крепкое зелье лечения", "category": "consumable",
+     "weight": 0.4, "base_value": 190, "stackable": true, "max_stack": 5, "effect": "heal",
+     "dice": "4d4+6", "use_time": "bonus", "limit_group": "potion", "rarity": "uncommon",
+     "tint": "d64060"},
+
+    {"id": "antidote", "display_name": "Антидот", "category": "consumable", "weight": 0.2,
+     "base_value": 65, "stackable": true, "max_stack": 5, "effect": "cure_status",
+     "status_id": "poisoned", "use_time": "bonus", "limit_group": "antidote", "tint": "4ea35a"},
+
+    {"id": "bandage", "display_name": "Повязка", "category": "consumable", "weight": 0.1,
+     "base_value": 20, "stackable": true, "max_stack": 10, "effect": "cure_status",
+     "status_id": "bleeding", "use_time": "bonus", "tint": "cfc4ab"},
+
+    {"id": "torch", "display_name": "Факел", "category": "consumable", "weight": 0.5,
+     "base_value": 12, "stackable": true, "max_stack": 10, "effect": "torch",
+     "torch_ticks": 600, "use_time": "bonus", "tint": "d98b34",
+     "description": "600 тиков света. 1 секунда исследования = 1 тик, раунд боя = 6 тиков."},
+
+    {"id": "essence_vial", "display_name": "Фиал эссенции", "category": "consumable",
+     "weight": 0.3, "base_value": 240, "stackable": true, "max_stack": 3,
+     "effect": "restore_slot", "use_time": "bonus", "rarity": "uncommon", "tint": "5a6fd8"},
+
+    {"id": "holy_water", "display_name": "Святая вода", "category": "consumable", "weight": 0.3,
+     "base_value": 150, "stackable": true, "max_stack": 3, "effect": "cure_status",
+     "status_id": "cursed", "use_time": "action", "tint": "e8e0c0"},
+
+    {"id": "elixir_might", "display_name": "Эликсир мощи", "category": "consumable",
+     "weight": 0.3, "base_value": 210, "stackable": true, "max_stack": 3, "effect": "buff",
+     "status_id": "blessed", "use_time": "bonus", "rarity": "uncommon", "tint": "d9c04a"}
+  ]
+}

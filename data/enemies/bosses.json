@@ -1,0 +1,44 @@
+{
+  "class": "EnemyData",
+  "comment": "Два уникальных босса акта (04-dungeon.md разд.5.3): этажи 10 и 20.",
+  "entries": [
+    {"id": "bone_abbot", "display_name": "Костяной Настоятель", "depth_tier": 4, "max_hp": 180,
+     "armor_class": 17, "speed_cells": 6, "size_cells": 2, "danger_points": 120,
+     "behavior": "aggressive", "is_boss": true, "proficiency_bonus": 4,
+     "stats": {"str": 18, "dex": 12, "con": 18, "int": 14, "wis": 16, "cha": 15},
+     "save_proficiencies": ["con", "wis"],
+     "immunities": ["poison"], "resistances": ["necrotic", "cold", "piercing"],
+     "vulnerabilities": ["radiant"],
+     "status_immunities": ["poison", "disease", "bleed", "mental", "control"],
+     "loot_table": "boss_act1", "tint": "e0d8b8",
+     "attacks": [
+       {"id": "crozier", "display_name": "Посох-костоправ", "attack_bonus": 8,
+        "damage_dice": "2d10+4", "damage_type": "bludgeoning", "range_cells": 2},
+       {"id": "grave_call", "display_name": "Зов могилы", "attack_bonus": 7,
+        "damage_dice": "4d6", "damage_type": "necrotic", "range_cells": 10,
+        "on_hit_status": "cursed", "on_hit_status_dc": 16, "save_stat": "wis"},
+       {"id": "bone_storm", "display_name": "Костяная буря", "attack_bonus": 7,
+        "damage_dice": "3d8", "damage_type": "piercing", "range_cells": 6, "area_radius": 2}
+     ]},
+
+    {"id": "mother_of_bogs", "display_name": "Матерь Топей", "depth_tier": 5, "max_hp": 300,
+     "armor_class": 19, "speed_cells": 6, "size_cells": 3, "danger_points": 220,
+     "behavior": "aggressive", "is_boss": true, "proficiency_bonus": 4,
+     "stats": {"str": 20, "dex": 14, "con": 20, "int": 16, "wis": 18, "cha": 17},
+     "save_proficiencies": ["str", "con", "wis"],
+     "immunities": ["poison", "acid"], "resistances": ["necrotic", "cold", "bludgeoning"],
+     "vulnerabilities": ["fire"],
+     "status_immunities": ["poison", "disease", "bleed", "mental", "control", "curse"],
+     "loot_table": "boss_act2", "tint": "5f7a52",
+     "attacks": [
+       {"id": "root_lash", "display_name": "Плеть корней", "attack_bonus": 10,
+        "damage_dice": "3d10+5", "damage_type": "bludgeoning", "range_cells": 3,
+        "on_hit_status": "restrained", "on_hit_status_dc": 17, "save_stat": "str"},
+       {"id": "rot_breath", "display_name": "Дыхание гнили", "attack_bonus": 9,
+        "damage_dice": "6d6", "damage_type": "poison", "range_cells": 8, "area_radius": 3,
+        "on_hit_status": "poisoned_heavy", "on_hit_status_dc": 17, "save_stat": "con"},
+       {"id": "drowning_grasp", "display_name": "Хватка трясины", "attack_bonus": 10,
+        "damage_dice": "4d8+5", "damage_type": "acid", "range_cells": 2}
+     ]}
+  ]
+}

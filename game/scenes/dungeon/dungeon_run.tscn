@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bswdung00001"]
+
+[ext_resource type="Script" path="res://game/scenes/dungeon/dungeon_run.gd" id="1_run"]
+
+[node name="DungeonRun" type="Node3D"]
+script = ExtResource("1_run")

@@ -1,0 +1,28 @@
+{
+  "class": "SkillNodeData",
+  "entries": [
+    {"id": "irma_trunk_1", "hero_id": "irma", "display_name": "Мастерство I", "branch": "trunk",
+     "row": 1, "modifiers": {"stat_dex": 1}, "description": "+1 ЛОВ."},
+    {"id": "irma_trunk_2", "hero_id": "irma", "display_name": "Мастерство II", "branch": "trunk",
+     "row": 2, "requires": ["irma_trunk_1"], "modifiers": {"max_hp": 6}, "description": "+6 HP."},
+    {"id": "irma_trunk_3", "hero_id": "irma", "display_name": "Мастерство III", "branch": "trunk",
+     "row": 3, "requires": ["irma_trunk_2"], "modifiers": {"attack": 1},
+     "description": "+1 к попаданию."},
+    {"id": "irma_trunk_4", "hero_id": "irma", "display_name": "Мастерство IV", "branch": "trunk",
+     "row": 4, "requires": ["irma_trunk_3"], "modifiers": {"stat_dex": 1}, "description": "+1 ЛОВ."},
+    {"id": "irma_shadow_1", "hero_id": "irma", "display_name": "Тихий шаг", "branch": "a",
+     "row": 1, "modifiers": {"stealth": 2}, "description": "+2 к скрытности."},
+    {"id": "irma_shadow_2", "hero_id": "irma", "display_name": "Тёмное зрение", "branch": "a",
+     "row": 2, "requires": ["irma_shadow_1"], "modifiers": {"darkvision": 1},
+     "description": "Видит в темноте на 12 клеток — ответ на механику факела."},
+    {"id": "irma_shadow_3", "hero_id": "irma", "display_name": "Удар в спину", "branch": "a",
+     "row": 3, "requires": ["irma_shadow_2"], "modifiers": {"sneak_dice": 1},
+     "description": "Скрытая атака наносит +1d6."},
+    {"id": "irma_shadow_4", "hero_id": "irma", "display_name": "Следопыт", "branch": "a",
+     "row": 4, "requires": ["irma_shadow_3"], "modifiers": {"pathfinder": 1},
+     "description": "Автоматически замечает ловушки СЛ 15 и ниже."},
+    {"id": "irma_shadow_5", "hero_id": "irma", "display_name": "Залп", "branch": "a",
+     "row": 5, "requires": ["irma_shadow_4"], "grants_ability": "volley",
+     "description": "Атака по конусу 6 клеток с -2."}
+  ]
+}

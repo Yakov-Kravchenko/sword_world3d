@@ -1,0 +1,32 @@
+{
+  "class": "ItemData",
+  "entries": [
+    {"id": "ore_iron", "display_name": "Железная руда", "category": "material", "weight": 0.8,
+     "base_value": 15, "stackable": true, "max_stack": 99, "tint": "7a6a5a", "tags": ["ore_t1"]},
+    {"id": "ore_silver", "display_name": "Лунное серебро", "category": "material", "weight": 0.8,
+     "base_value": 60, "stackable": true, "max_stack": 99, "rarity": "uncommon",
+     "tint": "b9c3cc", "tags": ["ore_t2"]},
+    {"id": "ore_star", "display_name": "Звёздный сплав", "category": "material", "weight": 0.9,
+     "base_value": 220, "stackable": true, "max_stack": 99, "rarity": "rare",
+     "tint": "8fa8d8", "tags": ["ore_t3"]},
+
+    {"id": "crystal_bone", "display_name": "Костяной кристалл", "category": "gem", "weight": 0.2,
+     "base_value": 180, "stackable": true, "max_stack": 20, "rarity": "rare",
+     "tint": "ded3c0", "tags": ["crystal"]},
+    {"id": "crystal_ore", "display_name": "Рудный кристалл", "category": "gem", "weight": 0.2,
+     "base_value": 180, "stackable": true, "max_stack": 20, "rarity": "rare",
+     "tint": "a98d5c", "tags": ["crystal"]},
+    {"id": "crystal_murk", "display_name": "Мутный кристалл", "category": "gem", "weight": 0.2,
+     "base_value": 180, "stackable": true, "max_stack": 20, "rarity": "rare",
+     "tint": "8fae7a", "tags": ["crystal"]},
+    {"id": "crystal_rot", "display_name": "Гнилостный кристалл", "category": "gem", "weight": 0.2,
+     "base_value": 180, "stackable": true, "max_stack": 20, "rarity": "rare",
+     "tint": "6f7a3f", "tags": ["crystal"]},
+    {"id": "crystal_chill", "display_name": "Стылый кристалл", "category": "gem", "weight": 0.2,
+     "base_value": 180, "stackable": true, "max_stack": 20, "rarity": "rare",
+     "tint": "8fc4d8", "tags": ["crystal"]},
+    {"id": "grimoire_page", "display_name": "Страница гримуара", "category": "material",
+     "weight": 0.1, "base_value": 120, "stackable": true, "max_stack": 20, "rarity": "uncommon",
+     "tint": "c7b48a", "tags": ["grimoire"]}
+  ]
+}

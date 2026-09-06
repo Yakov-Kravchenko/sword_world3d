@@ -1,0 +1,18 @@
+{
+  "_comment": "Соответствие id актёра и модели. Путь указывается от assets/models/ без расширения.",
+  "hald": "kenney_characters/character-a",
+  "irma": "kenney_characters/character-b",
+  "vern": "kenney_characters/character-c",
+  "mara": "kenney_characters/character-d",
+
+  "skeleton_warrior": "kenney_graveyard/character-skeleton",
+  "bone_archer": "kenney_graveyard/character-skeleton",
+  "bone_legionnaire": "kenney_graveyard/character-skeleton",
+  "ghoul": "kenney_graveyard/character-zombie",
+  "drowned_one": "kenney_graveyard/character-zombie",
+  "gravedigger": "kenney_graveyard/character-keeper",
+  "cold_wraith": "kenney_graveyard/character-ghost",
+  "lich_acolyte": "kenney_graveyard/character-vampire",
+  "witch_of_fens": "kenney_graveyard/character-vampire",
+  "enemy_default": "kenney_graveyard/character-skeleton"
+}

@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bswvshot0001"]
+
+[ext_resource type="Script" path="res://tools/village_shot.gd" id="1_vshot"]
+
+[node name="VillageShot" type="Node"]
+script = ExtResource("1_vshot")

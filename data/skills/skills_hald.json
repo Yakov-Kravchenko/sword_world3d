@@ -1,0 +1,31 @@
+{
+  "class": "SkillNodeData",
+  "comment": "Ствол (4 узла) + ветка. Ряды 6-8 лежат в данных и открываются обновлением.",
+  "entries": [
+    {"id": "hald_trunk_1", "hero_id": "hald", "display_name": "Мастерство I", "branch": "trunk",
+     "row": 1, "modifiers": {"stat_str": 1}, "description": "+1 СИЛ."},
+    {"id": "hald_trunk_2", "hero_id": "hald", "display_name": "Мастерство II", "branch": "trunk",
+     "row": 2, "requires": ["hald_trunk_1"], "modifiers": {"max_hp": 8}, "description": "+8 HP."},
+    {"id": "hald_trunk_3", "hero_id": "hald", "display_name": "Мастерство III", "branch": "trunk",
+     "row": 3, "requires": ["hald_trunk_2"], "modifiers": {"stat_con": 1}, "description": "+1 ТЕЛ."},
+    {"id": "hald_trunk_4", "hero_id": "hald", "display_name": "Мастерство IV", "branch": "trunk",
+     "row": 4, "requires": ["hald_trunk_3"], "modifiers": {"ac": 1}, "description": "+1 КБ."},
+    {"id": "hald_wall_1", "hero_id": "hald", "display_name": "Крепкая хватка", "branch": "a",
+     "row": 1, "modifiers": {"ac": 1}, "description": "+1 КБ со щитом."},
+    {"id": "hald_wall_2", "hero_id": "hald", "display_name": "Стойкость", "branch": "a",
+     "row": 2, "requires": ["hald_wall_1"], "modifiers": {"absorb": 1},
+     "description": "Поглощение 1 от каждой атаки."},
+    {"id": "hald_wall_3", "hero_id": "hald", "display_name": "Провокация II", "branch": "a",
+     "row": 3, "requires": ["hald_wall_2"], "modifiers": {"taunt_targets": 1},
+     "description": "Провокация действует на 2 целей."},
+    {"id": "hald_wall_4", "hero_id": "hald", "display_name": "Несгибаемый", "branch": "a",
+     "row": 4, "requires": ["hald_wall_3"], "modifiers": {"undying": 1},
+     "description": "1 раз за отдых остаться на 1 HP вместо падения."},
+    {"id": "hald_wall_5", "hero_id": "hald", "display_name": "Ответный удар", "branch": "a",
+     "row": 5, "requires": ["hald_wall_4"], "modifiers": {"riposte": 1},
+     "description": "Успешное Парирование даёт бесплатную атаку."},
+    {"id": "hald_wall_6", "hero_id": "hald", "display_name": "Железная воля", "branch": "a",
+     "row": 6, "requires": ["hald_wall_5"], "modifiers": {"saves": 2},
+     "available_from_version": "1.1", "description": "Приходит с обновлением «Разлом»."}
+  ]
+}

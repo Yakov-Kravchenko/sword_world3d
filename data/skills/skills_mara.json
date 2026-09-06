@@ -1,0 +1,28 @@
+{
+  "class": "SkillNodeData",
+  "entries": [
+    {"id": "mara_trunk_1", "hero_id": "mara", "display_name": "Мастерство I", "branch": "trunk",
+     "row": 1, "modifiers": {"stat_wis": 1}, "description": "+1 МДР."},
+    {"id": "mara_trunk_2", "hero_id": "mara", "display_name": "Мастерство II", "branch": "trunk",
+     "row": 2, "requires": ["mara_trunk_1"], "modifiers": {"max_hp": 6}, "description": "+6 HP."},
+    {"id": "mara_trunk_3", "hero_id": "mara", "display_name": "Мастерство III", "branch": "trunk",
+     "row": 3, "requires": ["mara_trunk_2"], "modifiers": {"spell_dc": 1},
+     "description": "+1 СЛ заклинаний."},
+    {"id": "mara_trunk_4", "hero_id": "mara", "display_name": "Мастерство IV", "branch": "trunk",
+     "row": 4, "requires": ["mara_trunk_3"], "modifiers": {"stat_wis": 1}, "description": "+1 МДР."},
+    {"id": "mara_life_1", "hero_id": "mara", "display_name": "Тёплые руки", "branch": "a",
+     "row": 1, "modifiers": {"heal_bonus": 2}, "description": "+2 к каждому лечению."},
+    {"id": "mara_life_2", "hero_id": "mara", "display_name": "Травница", "branch": "a",
+     "row": 2, "requires": ["mara_life_1"], "modifiers": {"potion_power": 1},
+     "description": "Зелья в её руках лечат на 50% больше."},
+    {"id": "mara_life_3", "hero_id": "mara", "display_name": "Очищение II", "branch": "a",
+     "row": 3, "requires": ["mara_life_2"], "modifiers": {"cleanse_count": 1},
+     "description": "«Очищение» снимает два статуса."},
+    {"id": "mara_life_4", "hero_id": "mara", "display_name": "Круг заботы", "branch": "a",
+     "row": 4, "requires": ["mara_life_3"], "grants_spell": "lesser_mass_heal",
+     "description": "Открывает «Волну исцеления»."},
+    {"id": "mara_life_5", "hero_id": "mara", "display_name": "Стойкая вера", "branch": "a",
+     "row": 5, "requires": ["mara_life_4"], "grants_spell": "mass_cure",
+     "description": "Открывает «Круг исцеления»."}
+  ]
+}

@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bswuidbg0001"]
+
+[ext_resource type="Script" path="res://tools/ui_debug.gd" id="1_dbg"]
+
+[node name="UIDebug" type="Node"]
+script = ExtResource("1_dbg")

@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+env:
+  GODOT_VERSION: 4.4.1
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Установить Godot
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q "Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          chmod +x /usr/local/bin/godot
+
+      - name: Импорт проекта
+        run: godot --headless --path . --import
+
+      - name: Валидатор контента
+        run: godot --headless --path . --script res://tools/validate_data.gd
+
+      - name: Тесты
+        run: godot --headless --path . --script res://tests/run_tests.gd
+
+      - name: Дымовой прогон
+        run: godot --headless --path . res://tools/smoke_test.tscn
+
+      - name: Глобальный RNG в core запрещён
+        run: |
+          if grep -rnE '(^|[^_a-zA-Z.])(randi|randf|randi_range|randf_range)\(' core/ --include='*.gd' | grep -v 'rng_stream.gd' | grep -vE ':[0-9]+:[[:space:]]*#'; then
+            echo "Найден глобальный RNG в core/ — используйте RngStream"
+            exit 1
+          fi
+
+      - name: В core нет нод
+        run: |
+          if grep -rn '^extends Node' core/ --include='*.gd'; then
+            echo "core/ не должен зависеть от нод"
+            exit 1
+          fi

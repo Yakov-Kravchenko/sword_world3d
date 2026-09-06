@@ -1,0 +1,90 @@
+{
+  "class": "StatusData",
+  "comment": "Все 17 статусов из 02-combat.md разд.7 плюс служебные метки.",
+  "entries": [
+    {"id": "bleeding", "display_name": "Кровотечение", "description": "1d4 урона за стак в начале хода, лечение вдвое слабее.",
+     "stackable": true, "max_stacks": 5, "duration_rounds": 3, "tick_dice": "1d4",
+     "tick_damage_type": "piercing", "tick_per_stack": true,
+     "modifiers": {"healing_mult": 0.5}, "tags": ["bleed"]},
+
+    {"id": "poisoned", "display_name": "Яд", "description": "Помеха на атаки и проверки, 1d4 урона ядом.",
+     "duration_rounds": 10, "tick_dice": "1d4", "tick_damage_type": "poison",
+     "attacks_have_disadvantage": true, "tags": ["poison"]},
+
+    {"id": "poisoned_heavy", "display_name": "Тяжёлое отравление", "description": "Яд плюс -2 КБ; спасбросок ТЕЛ в конце хода.",
+     "duration_rounds": 99, "tick_dice": "1d6", "tick_damage_type": "poison",
+     "attacks_have_disadvantage": true, "modifiers": {"ac": -2},
+     "save_stat": "con", "save_dc": 13, "tags": ["poison"]},
+
+    {"id": "burning", "display_name": "Ожог", "description": "1d6 огнём в начале хода, -2 КБ. Гасится холодом или водой.",
+     "duration_rounds": 2, "tick_dice": "1d6", "tick_damage_type": "fire",
+     "modifiers": {"ac": -2}, "removed_by_damage_types": ["cold"], "tags": ["fire"]},
+
+    {"id": "frostbite", "display_name": "Обморожение", "description": "Скорость -50%, реакция недоступна.",
+     "duration_rounds": 2, "no_reaction": true, "modifiers": {"speed_mult": 0.5},
+     "removed_by_damage_types": ["fire"], "tags": ["cold"]},
+
+    {"id": "frozen", "display_name": "Заморозка", "description": "Обездвижен, атаки по цели с преимуществом. Огонь снимает.",
+     "duration_rounds": 1, "blocks_movement": true, "incoming_have_advantage": true,
+     "save_stat": "con", "save_dc": 13, "removed_by_damage_types": ["fire"], "tags": ["cold"]},
+
+    {"id": "stunned", "display_name": "Оглушение", "description": "Пропуск хода, автопровал спасбросков СИЛ и ЛОВ.",
+     "duration_rounds": 1, "skip_turn": true, "no_reaction": true,
+     "incoming_have_advantage": true, "tags": ["control"]},
+
+    {"id": "paralyzed", "display_name": "Паралич", "description": "Как оглушение; ближние атаки по цели — автокрит.",
+     "duration_rounds": 2, "skip_turn": true, "no_reaction": true,
+     "incoming_have_advantage": true, "incoming_melee_auto_crit": true,
+     "save_stat": "con", "save_dc": 13, "tags": ["control", "poison"]},
+
+    {"id": "blinded", "display_name": "Ослепление", "description": "Помеха на свои атаки, преимущество атакующим.",
+     "duration_rounds": 2, "attacks_have_disadvantage": true,
+     "incoming_have_advantage": true, "tags": ["sense"]},
+
+    {"id": "feared", "display_name": "Страх", "description": "Нельзя приближаться к источнику, помеха на атаки.",
+     "duration_rounds": 2, "attacks_have_disadvantage": true, "prevents_approach": true,
+     "save_stat": "wis", "save_dc": 13, "tags": ["mental"]},
+
+    {"id": "slowed", "display_name": "Замедление", "description": "Скорость -50%, нет бонусного действия.",
+     "duration_rounds": 3, "no_bonus_action": true, "modifiers": {"speed_mult": 0.5},
+     "tags": ["control"]},
+
+    {"id": "cursed", "display_name": "Проклятие", "description": "-2 ко всем броскам d20. Снимается только у алтаря или в церкви.",
+     "duration_rounds": 999, "modifiers": {"attack": -2, "saves": -2},
+     "persists_after_combat": true, "tags": ["curse"]},
+
+    {"id": "diseased", "display_name": "Болезнь", "description": "Максимум HP -20%. До конца забега.",
+     "duration_rounds": 999, "modifiers": {"max_hp_mult": 0.8},
+     "persists_after_combat": true, "tags": ["disease"]},
+
+    {"id": "restrained", "display_name": "Обездвиженность", "description": "Скорость 0, помеха на свои атаки, преимущество по вам.",
+     "duration_rounds": 2, "blocks_movement": true, "attacks_have_disadvantage": true,
+     "incoming_have_advantage": true, "save_stat": "str", "save_dc": 13, "tags": ["control"]},
+
+    {"id": "vulnerable_mark", "display_name": "Уязвимость", "description": "Следующий урон помеченного типа удваивается.",
+     "duration_rounds": 1, "tags": ["mark"]},
+
+    {"id": "blessed", "display_name": "Благословение", "description": "+2 к атакам и спасброскам.",
+     "duration_rounds": 10, "is_debuff": false, "modifiers": {"attack": 2, "saves": 2},
+     "tags": ["buff"]},
+
+    {"id": "inspired", "display_name": "Вдохновение", "description": "+3 к броскам до использования.",
+     "duration_rounds": 10, "is_debuff": false, "modifiers": {"attack": 3, "saves": 3},
+     "tags": ["buff"]},
+
+    {"id": "prone_push", "display_name": "Сбит с ног", "description": "Лежит: ближние атаки по цели с преимуществом, дальние — с помехой.",
+     "duration_rounds": 1, "incoming_have_advantage": true,
+     "attacks_have_disadvantage": true, "modifiers": {"speed_mult": 0.5}, "tags": ["control"]},
+
+    {"id": "taunted", "display_name": "Провокация", "description": "Приоритет цели смещён на провоцировавшего, помеха на атаки по другим.",
+     "duration_rounds": 2, "tags": ["mental"]},
+
+    {"id": "shield_wall_buff", "display_name": "Стена щитов", "description": "+4 КБ себе и союзникам рядом, скорость 0.",
+     "duration_rounds": 1, "is_debuff": false, "blocks_movement": true,
+     "modifiers": {"ac": 4}, "tags": ["buff"]},
+
+    {"id": "soul_chill", "display_name": "Холод души", "description": "Аура некрополя: максимум HP тает, пока стоишь в зоне.",
+     "duration_rounds": 99, "modifiers": {"max_hp_mult": 0.95}, "stackable": true,
+     "max_stacks": 8, "persists_after_combat": true, "tags": ["cold", "curse"]}
+  ]
+}

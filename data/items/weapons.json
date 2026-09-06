@@ -1,0 +1,59 @@
+{
+  "class": "WeaponData",
+  "entries": [
+    {"id": "sword_notched", "display_name": "Зазубренный меч", "category": "weapon", "weight": 1.5,
+     "grid_size": [1, 2], "base_value": 45, "damage_dice": "1d8", "damage_type": "slashing",
+     "attack_stat": "str", "range_cells": 1, "slot": "main_hand",
+     "allowed_affix_pools": ["weapon"], "tint": "8a8f96",
+     "description": "Верный, много раз перековывался."},
+
+    {"id": "longsword", "display_name": "Полуторный меч", "category": "weapon", "weight": 2.7,
+     "grid_size": [1, 3], "base_value": 120, "damage_dice": "1d10", "damage_type": "slashing",
+     "attack_stat": "str", "range_cells": 1, "slot": "main_hand",
+     "properties": ["two_handed", "heavy"], "allowed_affix_pools": ["weapon"], "tint": "9aa2ab"},
+
+    {"id": "war_axe", "display_name": "Боевой топор", "category": "weapon", "weight": 2.0,
+     "grid_size": [1, 2], "base_value": 90, "damage_dice": "1d8", "damage_type": "slashing",
+     "attack_stat": "str", "slot": "main_hand", "allowed_affix_pools": ["weapon"], "tint": "7d6a52"},
+
+    {"id": "warhammer", "display_name": "Молот глубин", "category": "weapon", "weight": 3.2,
+     "grid_size": [1, 3], "base_value": 140, "damage_dice": "1d10", "damage_type": "bludgeoning",
+     "attack_stat": "str", "slot": "main_hand", "properties": ["two_handed", "heavy"],
+     "allowed_affix_pools": ["weapon"], "tint": "6f7378"},
+
+    {"id": "spear", "display_name": "Копьё", "category": "weapon", "weight": 1.8,
+     "grid_size": [1, 3], "base_value": 60, "damage_dice": "1d8", "damage_type": "piercing",
+     "attack_stat": "str", "range_cells": 2, "slot": "main_hand", "properties": ["reach"],
+     "allowed_affix_pools": ["weapon"], "tint": "8b7a5e"},
+
+    {"id": "dagger", "display_name": "Кинжал", "category": "weapon", "weight": 0.5,
+     "grid_size": [1, 1], "base_value": 25, "damage_dice": "1d4", "damage_type": "piercing",
+     "attack_stat": "dex", "slot": "main_hand", "properties": ["light", "finesse"],
+     "allowed_affix_pools": ["weapon"], "tint": "b0b6bd"},
+
+    {"id": "rapier", "display_name": "Рапира", "category": "weapon", "weight": 1.1,
+     "grid_size": [1, 2], "base_value": 110, "damage_dice": "1d8", "damage_type": "piercing",
+     "attack_stat": "dex", "slot": "main_hand", "properties": ["finesse"],
+     "allowed_affix_pools": ["weapon"], "tint": "c2c8cf"},
+
+    {"id": "shortbow", "display_name": "Короткий лук", "category": "weapon", "weight": 1.0,
+     "grid_size": [1, 3], "base_value": 75, "damage_dice": "1d6", "damage_type": "piercing",
+     "attack_stat": "dex", "range_cells": 20, "slot": "main_hand",
+     "properties": ["two_handed", "ranged"], "allowed_affix_pools": ["weapon"], "tint": "8a6b45"},
+
+    {"id": "crossbow", "display_name": "Арбалет", "category": "weapon", "weight": 2.2,
+     "grid_size": [2, 2], "base_value": 130, "damage_dice": "1d8", "damage_type": "piercing",
+     "attack_stat": "dex", "range_cells": 16, "slot": "main_hand",
+     "properties": ["two_handed", "ranged"], "allowed_affix_pools": ["weapon"], "tint": "6b5a44"},
+
+    {"id": "staff_charred", "display_name": "Обугленный посох", "category": "weapon", "weight": 1.6,
+     "grid_size": [1, 3], "base_value": 85, "damage_dice": "1d6", "damage_type": "bludgeoning",
+     "attack_stat": "str", "slot": "main_hand", "properties": ["two_handed"],
+     "spell_dc_bonus": 1, "allowed_affix_pools": ["weapon", "focus"], "tint": "5a4736",
+     "description": "+1 к СЛ заклинаний владельца."},
+
+    {"id": "club_banded", "display_name": "Окованная дубина", "category": "weapon", "weight": 1.4,
+     "grid_size": [1, 2], "base_value": 40, "damage_dice": "1d6", "damage_type": "bludgeoning",
+     "attack_stat": "str", "slot": "main_hand", "allowed_affix_pools": ["weapon"], "tint": "6d5a3f"}
+  ]
+}

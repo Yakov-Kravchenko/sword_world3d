@@ -1,0 +1,28 @@
+{
+  "class": "SkillNodeData",
+  "entries": [
+    {"id": "vern_trunk_1", "hero_id": "vern", "display_name": "Мастерство I", "branch": "trunk",
+     "row": 1, "modifiers": {"stat_int": 1}, "description": "+1 ИНТ."},
+    {"id": "vern_trunk_2", "hero_id": "vern", "display_name": "Мастерство II", "branch": "trunk",
+     "row": 2, "requires": ["vern_trunk_1"], "modifiers": {"max_hp": 5}, "description": "+5 HP."},
+    {"id": "vern_trunk_3", "hero_id": "vern", "display_name": "Мастерство III", "branch": "trunk",
+     "row": 3, "requires": ["vern_trunk_2"], "modifiers": {"spell_dc": 1},
+     "description": "+1 СЛ заклинаний."},
+    {"id": "vern_trunk_4", "hero_id": "vern", "display_name": "Мастерство IV", "branch": "trunk",
+     "row": 4, "requires": ["vern_trunk_3"], "modifiers": {"stat_int": 1}, "description": "+1 ИНТ."},
+    {"id": "vern_flame_1", "hero_id": "vern", "display_name": "Искра", "branch": "a",
+     "row": 1, "modifiers": {"damage": 1}, "description": "+1 к урону заклинаний."},
+    {"id": "vern_flame_2", "hero_id": "vern", "display_name": "Жаркая кровь", "branch": "a",
+     "row": 2, "requires": ["vern_flame_1"], "grants_spell": "scorching_ray",
+     "description": "Открывает «Опаляющий луч»."},
+    {"id": "vern_flame_3", "hero_id": "vern", "display_name": "Пламегон", "branch": "a",
+     "row": 3, "requires": ["vern_flame_2"], "modifiers": {"fire_damage": 2},
+     "description": "+2 к урону огнём."},
+    {"id": "vern_flame_4", "hero_id": "vern", "display_name": "Расширение", "branch": "a",
+     "row": 4, "requires": ["vern_flame_3"], "modifiers": {"aoe_size": 1},
+     "description": "Радиус площадных заклинаний +1 клетка."},
+    {"id": "vern_flame_5", "hero_id": "vern", "display_name": "Огненный шар", "branch": "a",
+     "row": 5, "requires": ["vern_flame_4"], "grants_spell": "fireball",
+     "description": "Открывает «Огненный шар»."}
+  ]
+}
