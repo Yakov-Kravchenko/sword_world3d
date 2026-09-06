@@ -1,14 +1,17 @@
 class_name HealthBar3D
 extends Node3D
-## Полоска здоровья над существом. Разворачивается к камере только по оси Y,
-## поэтому остаётся горизонтальной и не «ложится» при наклоне тактической камеры.
+## Полоска здоровья над существом. Плоскость полоски держим параллельно экрану:
+## при развороте только по оси Y она под перспективой уезжает наискось тем
+## сильнее, чем дальше существо от центра кадра. Билборд самих квадов не годится
+## — заливка сдвигается по локальной оси X, а билборд её как раз и подменяет.
 
-const WIDTH := 1.5
+const WIDTH := 1.1
 const HEIGHT := 0.2
 
 var _fill: MeshInstance3D
 var _label: Label3D
 var _max_hp: int = 1
+var _width: float = WIDTH
 var _hp: int = 1
 
 static func create(display_name: String, max_hp: int, width: float = WIDTH) -> HealthBar3D:
@@ -19,6 +22,7 @@ static func create(display_name: String, max_hp: int, width: float = WIDTH) -> H
 	return bar
 
 func _build(width: float) -> void:
+	_width = width
 	add_child(_quad(Vector2(width + 0.06, HEIGHT + 0.05), Color(0.05, 0.05, 0.06, 0.9), 0.0))
 	_fill = _quad(Vector2(width, HEIGHT), UIKit.GOOD, 0.01)
 	add_child(_fill)
@@ -64,16 +68,14 @@ func _apply() -> void:
 	var value := ratio()
 	# Полоска убывает справа налево: сдвигаем и сжимаем заливку по локальной оси X.
 	_fill.scale.x = maxf(0.001, value)
-	_fill.position.x = -(1.0 - value) * WIDTH * 0.5
+	_fill.position.x = -(1.0 - value) * _width * 0.5
 	var mat: StandardMaterial3D = _fill.material_override
 	mat.albedo_color = UIKit.hp_color(value)
 	_label.text = "%s  %d/%d" % [_label.text.split("  ")[0], _hp, _max_hp]
+
 
 func _process(_delta: float) -> void:
 	var camera := get_viewport().get_camera_3d()
 	if camera == null:
 		return
-	var to_camera := camera.global_position - global_position
-	if to_camera.length_squared() < 0.0001:
-		return
-	global_rotation = Vector3(0.0, atan2(to_camera.x, to_camera.z), 0.0)
+	global_rotation = camera.global_rotation

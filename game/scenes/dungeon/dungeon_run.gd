@@ -27,6 +27,8 @@ var combat_controller: Node
 var hud: Control
 var minimap: Control
 var _trail: Array[Vector3] = []
+## Аниматоры отряда в режиме исследования: держат клип ходьбы и стойки.
+var _walk_animators: Array[ActorAnimator] = []
 var _torch_accumulator: float = 0.0
 var _pending_interaction: Dictionary = {}
 ## Разовые результаты действий над ящиками: индекс пропа -> уже сделано.
@@ -85,6 +87,7 @@ func _spawn_party() -> void:
 		node.position = start + Vector3(0.0, 0.0, i * 0.6)
 		add_child(node)
 		party_nodes.append(node)
+		_walk_animators.append(ActorAnimator.attach(node))
 	leader = party_nodes[0]
 	torch_light = OmniLight3D.new()
 	torch_light.light_color = Color(1.0, 0.72, 0.42)
@@ -132,6 +135,7 @@ func _process_explore(delta: float) -> void:
 		var basis_dir := Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, camera_yaw)
 		_try_move(leader, basis_dir.normalized() * speed * delta)
 		leader.rotation.y = atan2(-basis_dir.x, -basis_dir.z)
+	_set_walking(input.length() > 0.01)
 	_update_followers(delta)
 	_mark_visited_room()
 	_check_room_trigger()
@@ -160,7 +164,18 @@ func _update_followers(delta: float) -> void:
 		node.visible = not member.is_dead_this_run
 		var index := mini(_trail.size() - 1, int(i * FOLLOW_GAP * 8))
 		var target: Vector3 = _trail[index]
-		node.global_position = node.global_position.lerp(target, clampf(delta * 4.0, 0.0, 1.0))
+		var before := node.global_position
+		node.global_position = before.lerp(target, clampf(delta * 4.0, 0.0, 1.0))
+		_face_along(node, node.global_position - before)
+
+## Спутники разворачиваются по своему шагу: без этого они шли боком или спиной
+## вперёд, сохраняя разворот с момента появления.
+func _face_along(node: Node3D, motion: Vector3) -> void:
+	var flat := Vector2(motion.x, motion.z)
+	if flat.length_squared() < 0.000004:
+		return
+	var wanted := atan2(-motion.x, -motion.z)
+	node.rotation.y = lerp_angle(node.rotation.y, wanted, 0.35)
 
 func _update_camera(delta: float) -> void:
 	if camera == null or leader == null:
@@ -591,3 +606,9 @@ func _update_camera_combat(delta: float) -> void:
 	var desired: Vector3 = focus + Vector3(0.0, 11.0, 8.0).rotated(Vector3.UP, camera_yaw)
 	camera.global_position = camera.global_position.lerp(desired, clampf(delta * 4.0, 0.05, 1.0))
 	camera.look_at(focus, Vector3.UP)
+
+## Ходьба всего отряда: спутники идут следом, поэтому клип у них общий с лидером.
+func _set_walking(moving: bool) -> void:
+	for animator: ActorAnimator in _walk_animators:
+		if is_instance_valid(animator):
+			animator.set_moving(moving)

@@ -78,9 +78,7 @@ static func build_hero(display_name: String, tint: Color, model_id: StringName =
 	# Готовая модель героя, если она положена в assets/models/actors.
 	var external := ModelLibrary.instantiate("actors", String(model_id))
 	if external != null:
-		external.name = display_name
-		external.set_meta("model_kind", "hero")
-		return external
+		return _wrap_external(external, display_name, "hero", String(model_id))
 	var root := Node3D.new()
 	root.name = display_name
 	root.set_meta("model_kind", "hero")
@@ -128,9 +126,8 @@ static func build_enemy(data: EnemyData, elite: bool, tint: Color) -> Node3D:
 	if external == null:
 		external = ModelLibrary.instantiate("actors", "enemy_default")
 	if external != null:
-		external.name = data.display_name if data != null else "Враг"
-		external.set_meta("model_kind", "enemy")
-		return external
+		return _wrap_external(external, data.display_name if data != null else "Враг",
+			"enemy", model_id)
 	var root := Node3D.new()
 	root.name = data.display_name if data != null else "Враг"
 	root.set_meta("model_kind", "enemy")
@@ -212,3 +209,18 @@ static func _add_crown(root: Node3D, height: float, scale_factor: float, tint: C
 			Vector3(sin(angle) * 0.22 * scale_factor, height,
 				cos(angle) * 0.22 * scale_factor), tint.lightened(0.45), "", true)
 		spike.rotation_degrees = Vector3(cos(angle) * 18.0, 0.0, -sin(angle) * 18.0)
+
+## Готовая модель оборачивается в узел-держатель: сам разворот модели лежит на
+## вложенном узле, поэтому игровой код крутит держатель как обычно, а модель
+## смотрит туда, куда идёт, а не в камеру.
+static func _wrap_external(model: Node3D, display_name: String, kind: String,
+		model_id: String) -> Node3D:
+	var root := Node3D.new()
+	root.name = display_name
+	root.set_meta("model_kind", kind)
+	model.rotation.y = deg_to_rad(ModelLibrary.model_yaw(model_id))
+	var factor := ModelLibrary.model_scale(model_id)
+	if not is_equal_approx(factor, 1.0):
+		model.scale = Vector3.ONE * factor
+	root.add_child(model)
+	return root
