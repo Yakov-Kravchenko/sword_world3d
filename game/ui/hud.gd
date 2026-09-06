@@ -91,7 +91,7 @@ func refresh() -> void:
 	if not mats.is_empty():
 		_resource_label.text += " · " + ", ".join(mats)
 	_dev_label.visible = GameState.dev_mode
-	_dev_label.text = "F1 — режим разработчика: атаки отряда наносят %d, отряд неуязвим" % GameState.DEV_DAMAGE
+	_dev_label.text = "F1 — режим разработчика: атаки отряда всегда попадают и наносят %d, отряд неуязвим" % GameState.DEV_DAMAGE
 	_rebuild_party()
 
 func _update_torch() -> void:

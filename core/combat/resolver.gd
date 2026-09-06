@@ -93,3 +93,13 @@ static func death_save(rng: RngStream, dc: int) -> Dictionary:
 		verdict = "критический провал"
 	return {"kind": "death_save", "natural": natural, "dc": dc, "success": natural >= dc,
 		"text": "спасбросок от смерти: d20(%d) -> %s" % [natural, verdict]}
+
+## Принудительное попадание для отладочного режима. Бросок не подменяется, а
+## помечается: в логе остаётся настоящий d20 с его КБ, иначе разобрать бой по
+## логу будет нельзя. Крит по-прежнему только настоящий — «всегда попадает» не
+## значит «всегда крит».
+static func force_hit(roll: Dictionary) -> Dictionary:
+	roll["hit"] = true
+	roll["success"] = true
+	roll["text"] = "%s -> попадание (режим разработчика)" % roll["text"]
+	return roll

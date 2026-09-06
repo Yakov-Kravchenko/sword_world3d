@@ -110,6 +110,8 @@ static func _apply_to_target(state: CombatState, caster: CombatActor, spell: Spe
 			+ int(caster.modifier(&"attack"))
 		var roll := Resolver.attack_roll(state.rng, bonus, target.effective_ac(), int(mode),
 			caster.crit_threshold(state.balance.crit_threshold), spell.display_name)
+		if state.dev_always_hit and caster.is_hero:
+			Resolver.force_hit(roll)
 		result.rolls.append(roll)
 		result.add_log("  по %s: %s" % [target.display_name, roll["text"]])
 		if not bool(roll["hit"]):

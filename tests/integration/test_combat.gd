@@ -131,6 +131,7 @@ func test_dev_damage_kills_in_one_hit() -> void:
 		_enemies([&"skeleton_warrior", &"bone_archer", &"ghoul"], 3), balance, statuses, 777)
 	state.spell_db = spells
 	state.dev_damage = 999
+	state.dev_always_hit = true
 	var result := BattleSimulator.run(state)
 	assert_true(bool(result["victory"]), "с отладочным уроном отряд побеждает")
 	assert_le(float(int(result["rounds"])), 3.0,
@@ -161,3 +162,33 @@ func test_invulnerable_party_takes_no_damage() -> void:
 	assert_eq(after, before, "неуязвимый отряд не теряет хитов")
 	assert_false(downed, "никто не падает при смерти")
 	assert_true(result.has("rounds"), "бой доигран до конца")
+
+## «Всегда попадает»: натуральный промах героя переводится в попадание. Считаем
+## по метке в логе, а не по слову «промах»: бросок остаётся настоящим и слово в
+## строке сохраняется — проверять надо именно вердикт после метки.
+func test_dev_always_hit_converts_hero_misses() -> void:
+	var state := BattleSimulator.build_state(_party(1),
+		_enemies([&"bone_legionnaire", &"ice_guard"], 12), balance, statuses, 909)
+	state.spell_db = spells
+	state.dev_always_hit = true
+	for actor: CombatActor in state.team_actors(CombatActor.TEAM_PARTY, false):
+		actor.invulnerable = true
+	var result := BattleSimulator.run(state)
+	var hero_names: Array[String] = []
+	for actor: CombatActor in state.team_actors(CombatActor.TEAM_PARTY, false):
+		hero_names.append(actor.display_name)
+	var forced := 0
+	var unconverted := 0
+	for line: String in result["log"]:
+		# Метку ставит только бросок героя, врагов режим не касается.
+		if line.contains("режим разработчика"):
+			forced += 1
+			continue
+		if not line.contains("промах"):
+			continue
+		for name: String in hero_names:
+			if line.begins_with(name):
+				unconverted += 1
+	assert_gt(float(forced), 0.0, "режим действительно вмешался хотя бы раз")
+	assert_eq(unconverted, 0, "ни один промах героя не остался промахом")
+	assert_true(bool(result["victory"]), "бой при этом доигрывается до победы")

@@ -79,6 +79,8 @@ static func resolve(state: CombatState, actor: CombatActor, target: CombatActor,
 	var auto_crit := attack.range_cells <= 1 and target.has_flag_status(&"incoming_melee_auto_crit")
 	var roll := Resolver.attack_roll(state.rng, attack_bonus(actor, attack), ac,
 		int(mode_info["mode"]), crit_at, attack.display_name)
+	if state.dev_always_hit and actor.is_hero:
+		Resolver.force_hit(roll)
 	if auto_crit and bool(roll["hit"]):
 		roll["crit"] = true
 	result.rolls.append(roll)

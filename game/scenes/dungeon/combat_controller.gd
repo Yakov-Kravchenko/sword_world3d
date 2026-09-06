@@ -723,5 +723,6 @@ func apply_dev_mode() -> void:
 	if state == null:
 		return
 	state.dev_damage = GameState.DEV_DAMAGE if GameState.dev_mode else 0
+	state.dev_always_hit = GameState.dev_mode
 	for actor: CombatActor in state.team_actors(CombatActor.TEAM_PARTY, false):
 		actor.invulnerable = GameState.dev_mode
