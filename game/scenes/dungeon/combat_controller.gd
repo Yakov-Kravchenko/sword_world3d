@@ -115,10 +115,9 @@ func _build_visuals() -> void:
 			enemy_nodes[actor.id] = node
 			_attach_health_bar(actor, node)
 			animators[actor.id] = ActorAnimator.attach(node)
-			# Круг под врагом виден только в его ход: постоянная подсветка
-			# врагов сбивала бы с толку — синий круг значит «мой».
-			var ring := SelectionRing3D.create()
-			ring.visible = false
+			var ring := SelectionRing3D.create(SelectionRing3D.ENEMY)
+			# Крупные существа занимают больше клеток — круг растёт вместе с ними.
+			ring.scale = Vector3.ONE * (1.0 + 0.5 * float(maxi(0, actor.size_cells - 1)))
 			node.add_child(ring)
 			enemy_rings[actor.id] = ring
 	var i := 0
@@ -715,8 +714,8 @@ static func _spell_color(spell: SpellData) -> Color:
 		&"radiant": return Color(1.0, 0.94, 0.7)
 	return Color(0.7, 0.75, 1.0) if spell.heal_dice.is_empty() else Color(0.5, 1.0, 0.6)
 
-## Зелёный круг под тем, чей сейчас ход. У героев круг постоянный и просто
-## меняет цвет, у врагов — появляется на их ход и снова прячется.
+## Зелёный круг под тем, чей сейчас ход. Круги постоянные у всех и просто меняют
+## цвет: синий у героев, красный у врагов, зелёный у того, кто ходит.
 func _highlight_turn(actor_id: StringName) -> void:
 	run_scene.set_active_ring(actor_id)
 	for id: Variant in enemy_rings.keys():
@@ -727,5 +726,4 @@ func _highlight_turn(actor_id: StringName) -> void:
 			enemy_rings.erase(id)
 			continue
 		var ring := value as SelectionRing3D
-		ring.visible = id == actor_id
 		ring.set_active(id == actor_id)
