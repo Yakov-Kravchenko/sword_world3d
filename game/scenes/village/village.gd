@@ -22,36 +22,16 @@ func _ready() -> void:
 		GameState.new_profile(&"hald")
 	_build_world()
 	_build_stations()
+	# Материалы правим после того, как всё построено: пройтись надо по готовой сцене.
+	VillageLook.polish_materials(self)
 	_build_ui()
 	_capture_mouse(true)
 	EventBus.notify("День %d в деревне. E — взаимодействие, Esc — курсор." % GameState.profile.day)
 
 func _build_world() -> void:
-	var env := WorldEnvironment.new()
-	var e := Environment.new()
-	e.background_mode = Environment.BG_COLOR
-	e.background_color = Color(0.09, 0.1, 0.13)
-	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = Color(0.42, 0.44, 0.5)
-	e.ambient_light_energy = 1.9
-	e.fog_enabled = true
-	e.fog_light_color = Color(0.12, 0.13, 0.16)
-	e.fog_density = 0.008
-	env.environment = e
-	add_child(env)
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-52.0, 38.0, 0.0)
-	sun.light_energy = 1.35
-	sun.light_color = Color(0.95, 0.88, 0.75)
-	sun.shadow_enabled = true
-	add_child(sun)
-	var yard := YARD_LIMIT * 2.0 + 4.0
-	_box(Vector3(yard, 0.4, yard), Vector3(0.0, -0.2, 0.0), Color(0.33, 0.31, 0.27))
-	for i: int in 4:
-		var angle := i * PI * 0.5
-		var offset := Vector3(sin(angle), 0.0, cos(angle)) * (YARD_LIMIT + 1.5)
-		var size := Vector3(yard, 6.0, 0.8) if i % 2 == 0 else Vector3(0.8, 6.0, yard)
-		_box(size, offset + Vector3(0.0, 3.0, 0.0), Color(0.17, 0.16, 0.15))
+	# Небо, свет, ландшафт, ограда и растительность — в VillageLook. Подбор
+	# освещения и генерация рельефа переросли размер этого файла.
+	VillageLook.new(self, YARD_LIMIT).build()
 	_build_chapel()
 	player = Node3D.new()
 	player.position = Vector3(0.0, 1.7, 29.0)
