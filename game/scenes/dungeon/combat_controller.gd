@@ -15,7 +15,6 @@ var cell_size: float = 1.5
 var ui: Control
 var markers: Node3D
 var enemy_nodes: Dictionary = {}      # actor_id -> Node3D
-var enemy_rings: Dictionary = {}      # actor_id -> SelectionRing3D
 var health_bars: Dictionary = {}      # actor_id -> HealthBar3D
 var animators: Dictionary = {}        # actor_id -> ActorAnimator
 var _fill_light: OmniLight3D
@@ -119,7 +118,6 @@ func _build_visuals() -> void:
 			# Крупные существа занимают больше клеток — круг растёт вместе с ними.
 			ring.scale = Vector3.ONE * (1.0 + 0.5 * float(maxi(0, actor.size_cells - 1)))
 			node.add_child(ring)
-			enemy_rings[actor.id] = ring
 	var i := 0
 	for actor: CombatActor in state.team_actors(CombatActor.TEAM_PARTY):
 		if i < run_scene.party_nodes.size():
@@ -236,7 +234,6 @@ func _on_actor_killed(actor_id: StringName) -> void:
 			node.queue_free()
 			enemy_nodes.erase(actor_id)
 		health_bars.erase(actor_id)
-		enemy_rings.erase(actor_id)
 	else:
 		var member := service.run.member(actor.source_id)
 		if member != null:
@@ -303,7 +300,6 @@ func _teardown() -> void:
 		if is_instance_valid(animator):
 			(animator as Node).queue_free()
 	animators.clear()
-	enemy_rings.clear()
 	for node: Node3D in enemy_nodes.values():
 		node.queue_free()
 	enemy_nodes.clear()
@@ -714,16 +710,8 @@ static func _spell_color(spell: SpellData) -> Color:
 		&"radiant": return Color(1.0, 0.94, 0.7)
 	return Color(0.7, 0.75, 1.0) if spell.heal_dice.is_empty() else Color(0.5, 1.0, 0.6)
 
-## Зелёный круг под тем, чей сейчас ход. Круги постоянные у всех и просто меняют
-## цвет: синий у героев, красный у врагов, зелёный у того, кто ходит.
+## Зелёный круг загорается только под героем, который ходит. Круг врага всегда
+## красный: зелёный читается как «сейчас мой ход», и на вражеском ходу он сбивал
+## с толку. Чей ход у противника, видно по очереди хода наверху экрана.
 func _highlight_turn(actor_id: StringName) -> void:
 	run_scene.set_active_ring(actor_id)
-	for id: Variant in enemy_rings.keys():
-		# Круг убитого врага уже освобождён вместе с его моделью, поэтому сначала
-		# проверяем ссылку и только потом присваиваем её типизированной переменной.
-		var value: Variant = enemy_rings[id]
-		if not is_instance_valid(value):
-			enemy_rings.erase(id)
-			continue
-		var ring := value as SelectionRing3D
-		ring.set_active(id == actor_id)
