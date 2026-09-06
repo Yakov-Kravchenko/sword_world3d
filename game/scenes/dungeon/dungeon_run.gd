@@ -88,13 +88,14 @@ func _spawn_party() -> void:
 		add_child(node)
 		party_nodes.append(node)
 		_walk_animators.append(ActorAnimator.attach(node))
+		ActorModel.set_casts_shadow(node, false)
 	leader = party_nodes[0]
 	torch_light = OmniLight3D.new()
 	torch_light.light_color = Color(1.0, 0.72, 0.42)
 	torch_light.light_energy = 2.4
 	torch_light.omni_range = Balance.data.light_dim_cells * cell_size
 	torch_light.shadow_enabled = true   # единственный источник теней в кадре
-	torch_light.position = Vector3(0.0, 1.4, 0.0)
+	torch_light.position = Vector3(0.4, 1.7, 0.5)   # факел над плечом, а не внутри груди
 	leader.add_child(torch_light)
 	_trail.clear()
 	for i: int in 64:

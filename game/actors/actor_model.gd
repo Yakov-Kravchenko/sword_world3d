@@ -224,3 +224,19 @@ static func _wrap_external(model: Node3D, display_name: String, kind: String,
 		model.scale = Vector3.ONE * factor
 	root.add_child(model)
 	return root
+
+## Факел висит вплотную к отряду, и любой из героев, попав между огнём и сценой,
+## закрывает её собственной тенью — подземелье уходит в черноту. Поэтому отряд
+## из отбрасывающих тень исключён: стены, столбы и враги тени по-прежнему дают.
+static func set_casts_shadow(root: Node3D, casts: bool) -> void:
+	var mode := GeometryInstance3D.SHADOW_CASTING_SETTING_ON if casts \
+		else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for node: Node in _walk(root):
+		if node is GeometryInstance3D:
+			(node as GeometryInstance3D).cast_shadow = mode
+
+static func _walk(node: Node) -> Array[Node]:
+	var found: Array[Node] = [node]
+	for child: Node in node.get_children():
+		found.append_array(_walk(child))
+	return found
