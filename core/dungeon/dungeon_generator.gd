@@ -5,6 +5,9 @@ extends RefCounted
 
 const MAP_SIZE := 72
 const ROOM_MIN := 5
+## Ширина коридора в клетках. Коридор в одну клетку читался как щель и не давал
+## отряду разойтись: в бою на сетке 1.5 м это ровно один боец в ряд.
+const CORRIDOR_WIDTH := 3
 const ROOM_MAX := 11
 const MAX_PLACEMENT_TRIES := 12
 const MAX_REGENERATIONS := 5
@@ -146,14 +149,23 @@ func _carve_l(plan: FloorPlan, from: Vector2i, to: Vector2i, rng: RngStream) -> 
 func _carve_line(plan: FloorPlan, from: Vector2i, to: Vector2i) -> void:
 	var cur := from
 	while cur != to:
-		if plan.tile(cur) == FloorPlan.TILE_WALL:
-			plan.set_tile(cur, FloorPlan.TILE_FLOOR)
+		_carve_brush(plan, cur)
 		if cur.x != to.x:
 			cur.x += signi(to.x - cur.x)
 		elif cur.y != to.y:
 			cur.y += signi(to.y - cur.y)
-	if plan.tile(to) == FloorPlan.TILE_WALL:
-		plan.set_tile(to, FloorPlan.TILE_FLOOR)
+	_carve_brush(plan, to)
+
+## Квадратная кисть по ходу коридора: заодно скругляет углы, где линия ломается.
+func _carve_brush(plan: FloorPlan, center: Vector2i) -> void:
+	var reach := (CORRIDOR_WIDTH - 1) / 2
+	for dy: int in range(-reach, reach + 1):
+		for dx: int in range(-reach, reach + 1):
+			# Внешнее кольцо стен остаётся нетронутым, иначе этаж вскрывается наружу.
+			var cell := Vector2i(clampi(center.x + dx, 1, MAP_SIZE - 2),
+				clampi(center.y + dy, 1, MAP_SIZE - 2))
+			if plan.tile(cell) == FloorPlan.TILE_WALL:
+				plan.set_tile(cell, FloorPlan.TILE_FLOOR)
 
 ## BFS от входа: проверка, что все комнаты достижимы (04-dungeon.md, шаг 3).
 func _is_connected(plan: FloorPlan) -> bool:
@@ -200,17 +212,17 @@ func _random_room_rect(rng: RngStream, pos: Vector2i) -> Rect2i:
 
 ## Шаг 4: назначение ролей комнатам (04-dungeon.md, раздел 3.2).
 func _assign_roles(plan: FloorPlan, rng: RngStream) -> void:
-	var distances := _room_distances(plan, 0)
-	plan.rooms[0].role = FloorPlan.ROLE_ENTRANCE
-	plan.entrance_cell = plan.rooms[0].center()
+	# Вход и выход разносим по концам графа комнат — по его диаметру. Комната 0
+	# стоит в середине карты, и выход от неё оказывался посреди этажа: часть
+	# комнат приходилось проходить дважды, туда и обратно.
+	var entrance_index := _farthest_room(plan, 0)
+	var distances := _room_distances(plan, entrance_index)
+	var exit_index := _farthest_room(plan, entrance_index)
+	if exit_index == entrance_index:
+		exit_index = (entrance_index + 1) % plan.rooms.size()
+	plan.rooms[entrance_index].role = FloorPlan.ROLE_ENTRANCE
+	plan.entrance_cell = plan.rooms[entrance_index].center()
 	plan.set_tile(plan.entrance_cell, FloorPlan.TILE_ENTRANCE)
-	var exit_index := 0
-	var best := -1
-	for i: int in plan.rooms.size():
-		var d: int = int(distances.get(i, -1))
-		if d > best:
-			best = d
-			exit_index = i
 	var exit_room := plan.rooms[exit_index]
 	exit_room.role = FloorPlan.ROLE_EXIT
 	plan.exit_cell = exit_room.center()
@@ -240,6 +252,19 @@ func _take_role(plan: FloorPlan, free: Array[int], role: StringName, count: int)
 		if free.is_empty():
 			return
 		plan.rooms[free.pop_back()].role = role
+
+## Самая дальняя комната по графу. Дважды подряд от произвольной комнаты — это
+## классический способ найти диаметр дерева, то есть два самых удалённых конца.
+func _farthest_room(plan: FloorPlan, from_index: int) -> int:
+	var distances := _room_distances(plan, from_index)
+	var best := -1
+	var found := from_index
+	for i: int in plan.rooms.size():
+		var d: int = int(distances.get(i, -1))
+		if d > best:
+			best = d
+			found = i
+	return found
 
 ## Расстояния по графу комнат (в рёбрах) от заданной комнаты.
 func _room_distances(plan: FloorPlan, from_index: int) -> Dictionary:
