@@ -4,8 +4,9 @@ extends Node
 ## Камера стоит в +Z — ровно там, где в подземелье висит камера за спиной отряда
 ## при движении вперёд. На снимке должны быть спины, а не лица.
 
-const IDS: Array[String] = ["hald", "irma", "vern", "mara", "skeleton_warrior",
-	"bone_archer", "lich_acolyte", "gravedigger"]
+const IDS: Array[String] = ["hald", "skeleton_warrior"]
+## Пропы рядом с героем — так сразу видно, не мелкий ли сундук и есть ли текстура.
+const PROPS: Array[String] = ["chest_common", "chest_treasure"]
 
 func _ready() -> void:
 	var world := Node3D.new()
@@ -23,12 +24,20 @@ func _ready() -> void:
 	e.ambient_light_energy = 0.7
 	env.environment = e
 	world.add_child(env)
-	var x := -float(IDS.size() - 1) * 1.1 / 2.0
+	var x := -float(IDS.size() + PROPS.size() - 1) * 1.1 / 2.0
 	for id: String in IDS:
 		var node := ActorModel.build_hero(id, Color(0.7, 0.7, 0.75), StringName(id))
 		node.position = Vector3(x, 0.0, 0.0)
 		world.add_child(node)
 		ActorAnimator.attach(node)
+		x += 1.1
+	for id: String in PROPS:
+		var prop := ModelLibrary.build("props", id)
+		if prop == null:
+			print("нет модели: ", id)
+			continue
+		prop.position = Vector3(x, 0.0, 0.0)
+		world.add_child(prop)
 		x += 1.1
 	var camera := Camera3D.new()
 	camera.fov = 40.0

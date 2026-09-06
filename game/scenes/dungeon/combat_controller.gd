@@ -51,6 +51,7 @@ func _build_state(encounter: Dictionary) -> void:
 	state.spell_db = Database.spell_map()
 	service.run.combat_index += 1
 	state.combat_index = service.run.combat_index
+	state.dev_damage = GameState.DEV_DAMAGE if GameState.dev_mode else 0
 	state.rng = service.run.stream(&"combat", service.run.combat_index)
 	var area := room.rect.grow(1)
 	state.grid = plan.build_combat_grid(area)
@@ -715,3 +716,9 @@ static func _spell_color(spell: SpellData) -> Color:
 ## с толку. Чей ход у противника, видно по очереди хода наверху экрана.
 func _highlight_turn(actor_id: StringName) -> void:
 	run_scene.set_active_ring(actor_id)
+
+## Переключение режима разработчика на ходу: бой берёт урон из состояния при
+## каждом ударе, поэтому достаточно обновить число.
+func apply_dev_mode() -> void:
+	if state != null:
+		state.dev_damage = GameState.DEV_DAMAGE if GameState.dev_mode else 0

@@ -217,6 +217,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		combat_controller.end_turn()
 	if event.is_action_pressed("interact") and mode == Mode.EXPLORE:
 		_interact()
+	if event.is_action_pressed("toggle_dev_mode"):
+		_toggle_dev_mode()
 	var key_event := event as InputEventKey
 	if key_event != null and key_event.pressed and key_event.keycode == KEY_Q and not service.run.torch_lit:
 		if service.light_new_torch():
@@ -639,3 +641,14 @@ func set_active_ring(actor_id: StringName) -> void:
 
 func ring_of_hero(index: int) -> SelectionRing3D:
 	return _rings[index] if index >= 0 and index < _rings.size() else null
+
+## Режим разработчика (F1): любая атака наносит GameState.DEV_DAMAGE. Флаг живёт
+## в сессии, поэтому переживает спуск на новый этаж, но не попадает в сохранение.
+## Идущий бой подхватывает переключение сразу — перезаходить не нужно.
+func _toggle_dev_mode() -> void:
+	GameState.dev_mode = not GameState.dev_mode
+	if combat_controller != null:
+		combat_controller.apply_dev_mode()
+	hud.refresh()
+	EventBus.notify("Режим разработчика %s." % ("включён" if GameState.dev_mode else "выключен"))
+	Log.info("dev_mode=%s" % GameState.dev_mode)

@@ -18,7 +18,13 @@
   "drowned_one": "kaykit_skeletons/Skeleton_Minion",
   "enemy_default": "kaykit_skeletons/Skeleton_Minion",
 
-  "_folder_scale": {"kaykit_heroes": 0.65, "kaykit_skeletons": 0.65},
+  "chest_common": "kaykit_dungeon/chest",
+  "chest_treasure": "kaykit_dungeon/chest_gold",
+
+  "_folder_scale": {"kaykit_heroes": 0.65, "kaykit_skeletons": 0.65, "kaykit_dungeon": 0.53},
+
+  "_comment_yaw": "У сундука «перёд» с замком смотрит в -Z, а камера в подземелье стоит в +Z — без доворота в 0 игрок видел бы только заднюю стенку.",
+  "_folder_yaw": {"kaykit_dungeon": 0},
 
   "bone_legionnaire_scale": 0.75,
   "bone_abbot_scale": 0.78

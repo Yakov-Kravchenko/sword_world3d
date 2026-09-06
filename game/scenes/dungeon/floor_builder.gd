@@ -100,7 +100,12 @@ func _build_props() -> void:
 		var node: Node3D = null
 		match StringName(prop["kind"]):
 			&"chest":
-				node = _prop_mesh(Vector3(0.9, 0.6, 0.6), Color(0.55, 0.38, 0.2))
+				# Сундук сокровищницы отличается от рядового: таблица лута уже
+				# записана в пропе, по ней и выбираем модель.
+				var table := String(prop.get("table", "chest_common"))
+				node = ModelLibrary.build("props", table)
+				if node == null:
+					node = _prop_mesh(Vector3(0.9, 0.6, 0.6), Color(0.55, 0.38, 0.2))
 			&"altar":
 				node = _prop_mesh(Vector3(1.0, 1.0, 1.0), Color(0.5, 0.65, 0.75))
 			&"gate":
@@ -112,7 +117,10 @@ func _build_props() -> void:
 					Color(0.35, 0.3, 0.28))
 		if node == null:
 			continue
-		node.position = cell_to_world(cell, cell_size, 0.3)
+		# У примитива начало координат в центре, у модели из кита — в основании,
+		# поэтому примитив приподнимаем, а модель ставим прямо на пол.
+		var lift := 0.3 if node is MeshInstance3D else 0.0
+		node.position = cell_to_world(cell, cell_size, lift)
 		node.set_meta("prop_index", i)
 		node.name = "Prop%d" % i
 		add_child(node)

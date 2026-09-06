@@ -123,3 +123,21 @@ func test_same_seed_reproduces_battle() -> void:
 		var r := BattleSimulator.run(state)
 		results.append("%s|%d|%d" % [r["victory"], r["rounds"], r["party_hp"]])
 	assert_eq(results[0], results[1], "один сид — один и тот же бой")
+
+## Режим разработчика: любая атака бьёт на dev_damage. Проверяем на бое целиком —
+## одно попадание должно снимать врага, у которого HP заведомо меньше.
+func test_dev_damage_kills_in_one_hit() -> void:
+	var state := BattleSimulator.build_state(_party(4),
+		_enemies([&"skeleton_warrior", &"bone_archer", &"ghoul"], 3), balance, statuses, 777)
+	state.spell_db = spells
+	state.dev_damage = 999
+	var result := BattleSimulator.run(state)
+	assert_true(bool(result["victory"]), "с отладочным уроном отряд побеждает")
+	assert_le(float(int(result["rounds"])), 3.0,
+		"три врага снимаются за пару раундов, а не за десяток")
+	var without := BattleSimulator.build_state(_party(4),
+		_enemies([&"skeleton_warrior", &"bone_archer", &"ghoul"], 3), balance, statuses, 777)
+	without.spell_db = spells
+	var plain := BattleSimulator.run(without)
+	assert_gt(float(int(plain["rounds"])), float(int(result["rounds"])),
+		"без режима тот же бой идёт дольше")

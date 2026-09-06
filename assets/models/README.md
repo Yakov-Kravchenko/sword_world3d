@@ -17,6 +17,9 @@ assets/models/actors/irma.glb
 assets/models/actors/vern.glb
 assets/models/actors/mara.glb
 assets/models/actors/enemy_default.glb
+
+assets/models/props/chest_common.glb    сундук в обычной комнате
+assets/models/props/chest_treasure.glb  сундук в сокровищнице
 ```
 
 Поддерживаются `.glb`, `.gltf`, `.tscn`, `.scn`.
@@ -68,6 +71,7 @@ assets/models/actors/enemy_default.glb
 |---|---|---|
 | KayKit Adventurers | CC0, Kay Lousberg | герои: Knight, Rogue, Rogue_Hooded, Mage |
 | KayKit Skeletons | CC0, Kay Lousberg | нежить: Warrior, Rogue, Mage, Minion |
+| KayKit Dungeon Remastered | CC0, Kay Lousberg | сундуки: обычный и сокровищницы |
 | Kenney Castle / Graveyard / Nature / Town | CC0, Kenney | постройки деревни (кит-бэшинг) |
 
 ## Проверка

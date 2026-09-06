@@ -58,6 +58,21 @@ static func instantiate(category: String, model_name: String) -> Node3D:
 	var node: Variant = (packed as PackedScene).instantiate()
 	return node if node is Node3D else null
 
+## Модель в узле-держателе: доворот и масштаб кита лежат на вложенном узле,
+## поэтому игровой код крутит и двигает держатель как обычный Node3D, ничего не
+## зная про особенности конкретного набора моделей.
+static func build(category: String, model_name: String) -> Node3D:
+	var model := instantiate(category, model_name)
+	if model == null:
+		return null
+	var root := Node3D.new()
+	model.rotation.y = deg_to_rad(model_yaw(model_name))
+	var factor := model_scale(model_name)
+	if not is_equal_approx(factor, 1.0):
+		model.scale = Vector3.ONE * factor
+	root.add_child(model)
+	return root
+
 ## Габариты модели в плане — нужны, чтобы построить препятствие под неё.
 static func footprint(node: Node3D) -> AABB:
 	var box := AABB()
@@ -97,6 +112,7 @@ static func expected() -> Dictionary:
 		"village": ["forge", "training", "shop", "garden", "storage", "descend", "chapel"],
 		"actors": ["hald", "irma", "vern", "mara", "skeleton_warrior", "bone_archer",
 			"bone_legionnaire", "lich_acolyte", "ghoul", "enemy_default"],
+		"props": ["chest_common", "chest_treasure"],
 	}
 
 ## Масштаб модели берётся из таблицы соответствий: автоматический замер габарита
