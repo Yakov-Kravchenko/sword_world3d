@@ -15,7 +15,8 @@ func _init(balance_data: BalanceData, biome_data: BiomeData, stream: RngStream,
 	rng = stream
 	enemy_db = enemies
 
-func build(room: FloorPlan.Room, depth: int, multiplier: float, elite: bool) -> Dictionary:
+func build(room: FloorPlan.Room, depth: int, multiplier: float, elite: bool,
+		kind: StringName = &"") -> Dictionary:
 	var budget := balance.encounter_budget(depth, multiplier)
 	var chosen: Array[StringName] = []
 	var support_count := 0
@@ -47,8 +48,11 @@ func build(room: FloorPlan.Room, depth: int, multiplier: float, elite: bool) -> 
 		elites.append(chosen[0])
 	elif budget > 60 and not chosen.is_empty():
 		elites.append(chosen[0])
+	var resolved := kind
+	if resolved == &"":
+		resolved = &"elite" if elite else &"normal"
 	return {"room": room.index, "enemies": chosen, "elites": elites,
-		"kind": &"elite" if elite else &"normal", "budget": budget, "spent": spent}
+		"kind": resolved, "budget": budget, "spent": spent}
 
 func build_boss(room: FloorPlan.Room, depth: int) -> Dictionary:
 	var boss_id: StringName = &"bone_abbot" if depth <= balance.act_length_floors else &"mother_of_bogs"

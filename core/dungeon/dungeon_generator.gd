@@ -224,17 +224,22 @@ func _assign_roles(plan: FloorPlan, rng: RngStream) -> void:
 	plan.entrance_cell = plan.rooms[entrance_index].center()
 	plan.set_tile(plan.entrance_cell, FloorPlan.TILE_ENTRANCE)
 	var exit_room := plan.rooms[exit_index]
-	exit_room.role = FloorPlan.ROLE_EXIT
 	plan.exit_cell = exit_room.center()
 	plan.set_tile(plan.exit_cell, FloorPlan.TILE_STAIRS_DOWN)
-	# Логово стража — комната перед выходом.
-	var guardian_index := _predecessor(plan, distances, exit_index)
-	if guardian_index >= 0:
-		plan.rooms[guardian_index].role = FloorPlan.ROLE_GUARDIAN
+	# Хозяин этажа стоит в самой дальней комнате — там же, где спуск: спуск он и
+	# охраняет (04-dungeon.md, раздел 5). Вестник на этажах 5 и 15 занимает место
+	# стража, а на этаже с боссом дальняя комната отдана арене, и страж отходит в
+	# комнату перед ней — так у арены остаётся подход.
+	var keeper := FloorPlan.ROLE_GUARDIAN
+	if balance.is_herald_floor(floor_index):
+		keeper = FloorPlan.ROLE_HERALD
 	if balance.is_boss_floor(floor_index):
 		exit_room.role = FloorPlan.ROLE_BOSS
-	elif balance.is_herald_floor(floor_index) and guardian_index >= 0:
-		plan.rooms[guardian_index].role = FloorPlan.ROLE_HERALD
+		var approach := _predecessor(plan, distances, exit_index)
+		if approach >= 0:
+			plan.rooms[approach].role = keeper
+	else:
+		exit_room.role = keeper
 	var free: Array[int] = []
 	for i: int in plan.rooms.size():
 		if plan.rooms[i].role == FloorPlan.ROLE_EMPTY:
@@ -297,9 +302,11 @@ func _populate(plan: FloorPlan, rng: RngStream) -> void:
 			FloorPlan.ROLE_BOSS:
 				plan.encounters.append(builder.build_boss(room, floor_index))
 			FloorPlan.ROLE_HERALD:
-				plan.encounters.append(builder.build(room, floor_index, balance.encounter_mult_guardian, true))
+				plan.encounters.append(builder.build(room, floor_index,
+					balance.encounter_mult_guardian, true, &"herald"))
 			FloorPlan.ROLE_GUARDIAN:
-				plan.encounters.append(builder.build(room, floor_index, balance.encounter_mult_elite, true))
+				plan.encounters.append(builder.build(room, floor_index,
+					balance.encounter_mult_elite, true, &"guardian"))
 			FloorPlan.ROLE_TREASURE:
 				plan.encounters.append(builder.build(room, floor_index, balance.encounter_mult_normal, false))
 			_:
@@ -323,7 +330,7 @@ func _place_props(plan: FloorPlan, room: FloorPlan.Room, rng: RngStream) -> void
 		FloorPlan.ROLE_ALTAR:
 			plan.props.append({"kind": &"altar", "cell": room.center(), "room": room.index})
 		FloorPlan.ROLE_BOSS:
-			plan.props.append({"kind": &"gate", "cell": room.center() + Vector2i(0, 2),
+			plan.props.append({"kind": &"gate", "cell": _gate_cell(plan, room, cells),
 				"room": room.index})
 		FloorPlan.ROLE_EVENT:
 			plan.props.append({"kind": &"event", "cell": room.center(), "room": room.index})
@@ -338,6 +345,22 @@ func _place_props(plan: FloorPlan, room: FloorPlan.Room, rng: RngStream) -> void
 		if rng.randf_value() < biome.trap_density:
 			plan.props.append({"kind": &"trap", "cell": rng.pick(cells), "room": room.index,
 				"dc": 12 + floor_index / 2})
+
+## Клетка Врат Возврата: внутри арены, на полу и не поверх спуска. Раньше стоял
+## жёсткий сдвиг «центр + 2 по Y», и на маленькой арене Врата уезжали в стену —
+## объект существовал, но подойти к нему было нельзя.
+func _gate_cell(plan: FloorPlan, room: FloorPlan.Room, cells: Array) -> Vector2i:
+	var best := room.center()
+	var best_score := -9999
+	for cell: Vector2i in cells:
+		if cell == plan.exit_cell:
+			continue
+		# Дальняя от входа стена, по центру: створ видно от порога арены.
+		var score := (cell.y - room.rect.position.y) * 4 - absi(cell.x - room.center().x)
+		if score > best_score:
+			best_score = score
+			best = cell
+	return best
 
 func _place_lights(plan: FloorPlan, rng: RngStream) -> void:
 	var count := rng.randi_range(0, 3)

@@ -75,6 +75,7 @@ func _build_state(encounter: Dictionary) -> void:
 		var is_elite: bool = elites.has(enemy_id) and enemy_index == 0
 		var actor := ActorBuilder.from_enemy(data, enemy_index, Balance.data, is_elite,
 			service.run.floor_index)
+		actor.rank = _rank_of(data, is_elite, encounter)
 		state.add_actor(actor)
 		actor.cell = _closest_free(free, room.center(), actor)
 		enemy_index += 1
@@ -262,6 +263,9 @@ func _on_combat_ended(victory: bool) -> void:
 			run_scene.minimap.refresh()
 		service.run.stats["rooms_cleared"] = int(service.run.stats.get("rooms_cleared", 0)) + 1
 		ui.append_log("Бой окончен. Победа.")
+		# Створ Врат держал босс: без подсказки игрок не поймёт, что теперь открыто.
+		if room.role == FloorPlan.ROLE_BOSS:
+			EventBus.notify("Босс акта повержен. Врата Возврата открылись.")
 	else:
 		ui.append_log("Отряд пал.")
 	# Бой длится в тиках факела: раунд = 6 тиков (02-combat.md, раздел 8.2).
@@ -481,12 +485,13 @@ func open_target_menu(target: CombatActor) -> void:
 		_add_self_options(actor, options)
 	var subtitle := "HP %d/%d · КБ %d · дистанция %d кл." % [target.hp, target.effective_max_hp(),
 		target.effective_ac(), CombatGrid.distance(actor.cell, target.cell)]
+	var rank_line := "" if target.team == CombatActor.TEAM_PARTY else target.rank_name()
 	if not target.statuses.is_empty():
 		var names: Array[String] = []
 		for s: StatusEffect in target.statuses:
 			names.append(s.data.display_name)
 		subtitle += "\nЭффекты: " + ", ".join(names)
-	ui.open_context_menu(target.display_name, subtitle, options)
+	ui.open_context_menu(target.display_name, subtitle, options, rank_line)
 
 func _add_attack_options(actor: CombatActor, target: CombatActor, options: Array) -> void:
 	var distance := CombatGrid.distance(actor.cell, target.cell)
@@ -616,8 +621,11 @@ func _attach_health_bar(actor: CombatActor, node: Node3D) -> void:
 	var label: String = actor.display_name
 	if actor.team == CombatActor.TEAM_PARTY:
 		label = actor.display_name.split(" ")[0]
+	var size_bonus := 1.0 + 0.25 * float(maxi(0, actor.size_cells - 1))
+	var rank_bonus := _bar_size_bonus(actor.rank)
 	var bar := HealthBar3D.create(label, actor.effective_max_hp(),
-		HealthBar3D.WIDTH * (1.0 + 0.25 * float(maxi(0, actor.size_cells - 1))))
+		HealthBar3D.WIDTH * size_bonus * rank_bonus, _bar_frame(actor.rank),
+		HealthBar3D.HEIGHT * rank_bonus)
 	node.add_child(bar)
 	# Модель из кита может быть отмасштабирована подгонкой роста — полоска не
 	# должна её наследовать, иначе становится гигантской или исчезает.
@@ -726,3 +734,29 @@ func apply_dev_mode() -> void:
 	state.dev_always_hit = GameState.dev_mode
 	for actor: CombatActor in state.team_actors(CombatActor.TEAM_PARTY, false):
 		actor.invulnerable = GameState.dev_mode
+
+## Ранг существа: он определяется не самим врагом, а тем, чью комнату он занял.
+## Один и тот же скелет бывает рядовым, элитой и стражем этажа.
+func _rank_of(data: EnemyData, is_elite: bool, encounter: Dictionary) -> StringName:
+	if data != null and data.is_boss:
+		return CombatActor.RANK_BOSS
+	if not is_elite:
+		return CombatActor.RANK_NORMAL
+	match StringName(encounter.get("kind", &"normal")):
+		&"guardian": return CombatActor.RANK_GUARDIAN
+		&"herald": return CombatActor.RANK_HERALD
+	return CombatActor.RANK_ELITE
+
+## Полоска хозяина этажа заметно крупнее рядовой и с цветной рамкой: по ней
+## видно, с кем имеешь дело, не открывая контекстное меню.
+func _bar_size_bonus(rank: StringName) -> float:
+	match rank:
+		CombatActor.RANK_GUARDIAN, CombatActor.RANK_HERALD: return 1.5
+		CombatActor.RANK_BOSS: return 1.8
+	return 1.0
+
+func _bar_frame(rank: StringName) -> Color:
+	match rank:
+		CombatActor.RANK_GUARDIAN, CombatActor.RANK_HERALD: return HealthBar3D.FRAME_KEEPER
+		CombatActor.RANK_BOSS: return HealthBar3D.FRAME_BOSS
+	return HealthBar3D.FRAME_PLAIN

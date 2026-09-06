@@ -55,6 +55,24 @@ var action_left: int = 0
 var bonus_left: int = 0
 var reaction_left: int = 0
 
+## Ранг существа: рядовой, элита, страж этажа, вестник, босс акта
+## (04-dungeon.md, раздел 5). Влияет только на подачу — правила боя одинаковы.
+const RANK_NORMAL := &"normal"
+const RANK_ELITE := &"elite"
+const RANK_GUARDIAN := &"guardian"
+const RANK_HERALD := &"herald"
+const RANK_BOSS := &"boss"
+
+const RANK_NAMES := {
+	RANK_NORMAL: "Рядовой противник",
+	RANK_ELITE: "Элитный противник",
+	RANK_GUARDIAN: "Страж этажа",
+	RANK_HERALD: "Вестник",
+	RANK_BOSS: "Босс акта",
+}
+
+var rank: StringName = RANK_NORMAL
+
 ## Отладочная неуязвимость: любой урон гасится в ноль. Ставится игровым слоем
 ## для режима разработчика — core про этот режим ничего не знает.
 var invulnerable: bool = false
@@ -177,3 +195,7 @@ func save_state() -> Dictionary:
 		"death_successes": death_successes, "death_failures": death_failures,
 		"slots": Array(spell_slots), "statuses": st, "flags": flags.duplicate(true),
 	}
+
+## Название ранга для интерфейса. Герои ранга не имеют — у них своя подпись.
+func rank_name() -> String:
+	return String(RANK_NAMES.get(rank, RANK_NAMES[RANK_NORMAL]))

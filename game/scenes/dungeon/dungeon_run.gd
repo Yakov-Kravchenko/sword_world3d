@@ -275,7 +275,7 @@ func _interaction_label() -> String:
 		&"altar": return "E — алтарь"
 		&"trap": return "E — ловушка"
 		&"event": return "E — старое святилище"
-		&"gate": return "E — Врата Возврата"
+		&"gate": return "E — Врата Возврата%s" % ("" if _boss_defeated() else " (заперты)")
 	return ""
 
 ## E открывает меню объекта, а не выполняет одно зашитое действие: у каждого
@@ -531,12 +531,23 @@ func _menu_event(prop: Dictionary) -> void:
 
 # --- Врата Возврата ---
 
+## Врата открываются только после победы над боссом акта (04-dungeon.md,
+## раздел 2.4): убежать от босса нельзя.
+func _boss_defeated() -> bool:
+	for e: Dictionary in plan.encounters:
+		var room := plan.rooms[int(e["room"])]
+		if room.role == FloorPlan.ROLE_BOSS and not service.run.cleared_rooms.has(room.index):
+			return false
+	return true
+
 func _menu_gate() -> void:
+	var ready := _boss_defeated()
 	hud.open_context_menu("Врата Возврата",
 		"Подъёмник наверх. Решение принимается один раз.", [
 			ContextMenu.option("Открыть створ и решить",
 				func() -> void: hud.show_extraction(service),
-				"Сводка добычи и выбор: уйти или идти дальше"),
+				"Сводка добычи и выбор: уйти или идти дальше" if ready
+					else "Створ держит хозяин этажа — сначала одолейте его", ready),
 		])
 func _try_descend() -> void:
 	var encounter_left := false

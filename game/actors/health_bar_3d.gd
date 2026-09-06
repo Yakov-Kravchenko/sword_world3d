@@ -7,6 +7,11 @@ extends Node3D
 
 const WIDTH := 1.1
 const HEIGHT := 0.2
+## Цвет рамки под полоской. По нему видно ранг существа ещё до контекстного
+## меню: серая — рядовой, оранжевая — страж этажа и вестник, голубая — босс акта.
+const FRAME_PLAIN := Color(0.05, 0.05, 0.06, 0.9)
+const FRAME_KEEPER := Color(0.92, 0.55, 0.15, 0.95)
+const FRAME_BOSS := Color(0.35, 0.72, 0.95, 0.95)
 
 var _fill: MeshInstance3D
 var _label: Label3D
@@ -14,22 +19,25 @@ var _max_hp: int = 1
 var _width: float = WIDTH
 var _hp: int = 1
 
-static func create(display_name: String, max_hp: int, width: float = WIDTH) -> HealthBar3D:
+static func create(display_name: String, max_hp: int, width: float = WIDTH,
+		frame: Color = FRAME_PLAIN, height: float = HEIGHT) -> HealthBar3D:
 	var bar := HealthBar3D.new()
 	bar.name = "HealthBar"
-	bar._build(width)
+	bar._build(width, frame, height)
 	bar.setup(display_name, max_hp)
 	return bar
 
-func _build(width: float) -> void:
+func _build(width: float, frame: Color, height: float) -> void:
 	_width = width
-	add_child(_quad(Vector2(width + 0.06, HEIGHT + 0.05), Color(0.05, 0.05, 0.06, 0.9), 0.0))
-	_fill = _quad(Vector2(width, HEIGHT), UIKit.GOOD, 0.01)
+	# Рамка шире и выше заливки — у крупных рангов она и работает подсветкой.
+	var border := maxf(0.06, height * 0.45)
+	add_child(_quad(Vector2(width + border, height + border), frame, 0.0))
+	_fill = _quad(Vector2(width, height), UIKit.GOOD, 0.01)
 	add_child(_fill)
 	_label = Label3D.new()
 	_label.font_size = 44
 	_label.pixel_size = 0.0042
-	_label.position = Vector3(0.0, HEIGHT * 0.5 + 0.28, 0.0)
+	_label.position = Vector3(0.0, height * 0.5 + 0.28, 0.0)
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_label.no_depth_test = false
 	_label.modulate = Color(0.92, 0.9, 0.86)

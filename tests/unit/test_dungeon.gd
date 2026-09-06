@@ -54,10 +54,14 @@ func test_roles_assigned() -> void:
 	var biome: BiomeData = index.get_resource(&"mines")
 	var plan := DungeonGenerator.new(balance, biome, 4, 12345).generate()
 	assert_not_null(plan.room_by_role(FloorPlan.ROLE_ENTRANCE))
-	assert_not_null(plan.room_by_role(FloorPlan.ROLE_EXIT))
 	assert_not_null(plan.room_by_role(FloorPlan.ROLE_GUARDIAN))
 	assert_not_null(plan.room_by_role(FloorPlan.ROLE_ALTAR))
 	assert_ne(plan.entrance_cell, plan.exit_cell)
+	# Страж стоит в той же комнате, что и спуск: мимо него на следующий этаж
+	# не пройти (04-dungeon.md, раздел 5).
+	var last_room := plan.room_at(plan.exit_cell)
+	assert_not_null(last_room, "спуск лежит внутри комнаты")
+	assert_eq(String(last_room.role), String(FloorPlan.ROLE_GUARDIAN))
 
 func test_boss_floor_uses_boss_room() -> void:
 	var biome: BiomeData = index.get_resource(&"necropolis")
@@ -108,3 +112,26 @@ func _rooms_overlap(plan: FloorPlan) -> bool:
 			if plan.rooms[i].rect.intersects(plan.rooms[j].rect):
 				return true
 	return false
+
+## Врата Возврата: только на этажах босса, только в его комнате (04-dungeon.md,
+## раздел 2.4). На обычном этаже их быть не должно — выход там через спуск.
+func test_gate_only_on_boss_floors_and_inside_boss_room() -> void:
+	var biome: BiomeData = index.get_resource(&"necropolis")
+	for floor_index: int in [1, 4, 9, balance.boss_floors[0], balance.boss_floors[1]]:
+		var gen := DungeonGenerator.new(balance, biome, floor_index, 8080)
+		gen.enemy_db = index.map_of_class("EnemyData")
+		var plan := gen.generate()
+		var gates: Array[Dictionary] = []
+		for prop: Dictionary in plan.props:
+			if StringName(prop["kind"]) == &"gate":
+				gates.append(prop)
+		if not balance.is_boss_floor(floor_index):
+			assert_eq(gates.size(), 0, "на этаже %d Врат быть не должно" % floor_index)
+			continue
+		assert_eq(gates.size(), 1, "на этаже %d ровно одни Врата" % floor_index)
+		var boss_room := plan.room_by_role(FloorPlan.ROLE_BOSS)
+		assert_not_null(boss_room, "арена босса на этаже %d" % floor_index)
+		var cell: Vector2i = gates[0]["cell"]
+		assert_true(boss_room.rect.has_point(cell),
+			"Врата стоят внутри комнаты босса на этаже %d" % floor_index)
+		assert_true(plan.is_floor(cell), "клетка Врат проходима")

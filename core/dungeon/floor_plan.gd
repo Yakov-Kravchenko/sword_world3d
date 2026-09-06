@@ -19,7 +19,6 @@ const ROLE_EVENT := &"event"
 const ROLE_GUARDIAN := &"guardian"
 const ROLE_HERALD := &"herald"
 const ROLE_BOSS := &"boss"
-const ROLE_EXIT := &"exit"
 const ROLE_SECRET := &"secret"
 
 class Room extends RefCounted:

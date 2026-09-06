@@ -74,10 +74,12 @@ func append_log(line: String) -> void:
 	_log.append_text(line + "\n")
 
 ## Контекстное меню цели живёт поверх боевого интерфейса.
-func open_context_menu(title: String, subtitle: String, options: Array) -> void:
+func open_context_menu(title: String, subtitle: String, options: Array,
+		rank: String = "") -> void:
 	close_context_menu()
 	_context_menu = ContextMenu.build(self, title, subtitle, options,
-		func() -> void: close_context_menu(), get_global_mouse_position() + Vector2(12.0, 12.0))
+		func() -> void: close_context_menu(), get_global_mouse_position() + Vector2(12.0, 12.0),
+		rank)
 
 func close_context_menu() -> void:
 	if _context_menu != null:

@@ -16,7 +16,8 @@ static func option(label: String, callback: Callable, hint: String = "",
 
 ## Строит меню внутри host и возвращает корень, чтобы вызывающий мог его закрыть.
 static func build(host: Control, title: String, subtitle: String, options: Array,
-		close_callback: Callable, at: Vector2 = Vector2(-1.0, -1.0)) -> Control:
+		close_callback: Callable, at: Vector2 = Vector2(-1.0, -1.0),
+		rank: String = "") -> Control:
 	var root := Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -32,6 +33,10 @@ static func build(host: Control, title: String, subtitle: String, options: Array
 	var box := UIKit.vbox(6)
 	panel.add_child(box)
 	box.add_child(UIKit.label(title, 18, UIKit.ACCENT))
+	# Ранг — отдельной строкой мельче названия: по имени «Элитный скелет-воин»
+	# не понять, рядовая это элита или страж этажа.
+	if not rank.is_empty():
+		box.add_child(UIKit.label(rank, 11, Color(0.62, 0.60, 0.56)))
 	if not subtitle.is_empty():
 		var sub := UIKit.label(subtitle, 12)
 		sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
