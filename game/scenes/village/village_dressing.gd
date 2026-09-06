@@ -35,6 +35,9 @@ func _init(village_look: VillageLook, obstacles: Array[Rect2], street_lines: Arr
 
 
 func dress() -> void:
+	# Достопримечательности первыми: их габариты должны попасть в список
+	# препятствий раньше, чем мелочь начнёт искать себе место.
+	_landmarks()
 	_market()
 	_street_furniture()
 	_yards()
@@ -161,7 +164,7 @@ func _riverside() -> void:
 		attempts += 1
 		var spot := Vector2(_rng.randf_range(-33.0, 33.0), _rng.randf_range(-33.0, 33.0))
 		var to_water := look.river_distance(spot)
-		if to_water < VillageLook.RIVER_HALF + 0.3 or to_water > VillageLook.RIVER_HALF + 4.5:
+		if to_water < look.profile.river_half + 0.3 or to_water > look.profile.river_half + 4.5:
 			continue
 		if _road_distance(spot) < ROAD_CLEARANCE + 2.0 or _blocked_by_props(spot, 1.0):
 			continue
@@ -207,7 +210,7 @@ func _yard_grass() -> void:
 	var mesh := VillageGear.grass_tuft(_rng)
 	if mesh == null:
 		return
-	var target := 5000
+	var target := look.profile.grass_count
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.mesh = mesh
@@ -258,7 +261,7 @@ func _free(spot: Vector2, clearance: float) -> bool:
 		return false
 	if _road_distance(spot) < ROAD_CLEARANCE + clearance:
 		return false
-	if look.river_distance(spot) < VillageLook.RIVER_HALF + 2.0:
+	if look.river_distance(spot) < look.profile.river_half + 2.0:
 		return false
 	return look.slope_at(spot.x, spot.y) < 0.42
 
@@ -283,3 +286,33 @@ func _road_distance(spot: Vector2) -> float:
 
 func _block(spot: Vector2, size: Vector2) -> void:
 	blockers.append(Rect2(spot - size * 0.5, size))
+
+
+## Достопримечательности из профиля деревни. С ними не взаимодействуют — они
+## задают силуэт места и дают повод свернуть с улицы. Раскладка у каждой
+## деревни своя, поэтому список приходит из профиля, а не задан здесь.
+func _landmarks() -> void:
+	for entry: Dictionary in look.profile.landmarks:
+		var at: Vector2 = entry["at"]
+		var yaw: float = entry.get("yaw", 0.0)
+		match entry["kind"]:
+			&"tower":
+				gear.watchtower(at, yaw)
+			&"stones":
+				gear.standing_stones(at)
+			&"graveyard":
+				gear.graveyard(at, yaw)
+			&"sawmill":
+				gear.sawmill(at, yaw)
+			&"pier":
+				gear.pier(at, yaw)
+			&"campfire":
+				gear.campfire(at)
+			&"ruin":
+				gear.ruin(at, yaw)
+			&"fish":
+				gear.fish_racks(at, yaw)
+			&"paddock":
+				gear.paddock(at, yaw)
+			_:
+				push_warning("Неизвестная достопримечательность: %s" % entry["kind"])

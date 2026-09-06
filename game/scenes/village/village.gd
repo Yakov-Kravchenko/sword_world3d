@@ -17,19 +17,7 @@ const CROUCH_FACTOR := 0.45
 ## Планировка деревни. Постройки стоят вдоль улицы, а не по кругу пустого поля:
 ## так двор читается как поселение, и между домами появляются перспективы.
 ## Река режет двор с юга, поэтому вход в деревню идёт через мост.
-const SPAWN := Vector2(0.0, 31.0)
-const BRIDGE_SOUTH := Vector2(0.0, 27.0)
-const BRIDGE_NORTH := Vector2(0.0, 9.0)
 
-const PLACES := {
-	&"garden": Vector2(-17.0, 4.0),
-	&"storage": Vector2(16.0, 4.0),
-	&"forge": Vector2(-14.0, -10.0),
-	&"shop": Vector2(14.0, -10.0),
-	&"training": Vector2(-12.0, -23.0),
-	&"descend": Vector2(0.0, -29.0),
-}
-const CHAPEL_CENTER := Vector2(16.0, -22.0)
 
 ## Площадка под постройку: внутри — ровно, снаружи — плавный съезд к рельефу.
 const PAD_RADIUS := 7.0
@@ -40,6 +28,8 @@ var player: CharacterBody3D
 var pitch: float = 0.0
 var ui: Control
 var look: VillageLook
+## Центр часовни берётся из профиля: у каждой деревни он свой.
+var chapel_at := Vector2.ZERO
 var stations: Array[Dictionary] = []
 var _blockers: Array[Rect2] = []
 var _focused: Dictionary = {}
@@ -49,6 +39,11 @@ var _crouching := false
 var _roads: Array = []
 
 func _ready() -> void:
+	# Ключ `-- --hero=vern` переключает деревню для проверки: обходить меню ради
+	# каждой из четырёх при отладке слишком долго.
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--hero="):
+			GameState.new_profile(StringName(arg.substr(7)))
 	if GameState.profile == null:
 		GameState.new_profile(&"hald")
 	var started := Time.get_ticks_msec()
@@ -56,7 +51,7 @@ func _ready() -> void:
 	_build_stations()
 	_build_roads()
 	# Обстановка идёт последней: ей нужны и препятствия от построек, и линии улиц.
-	VillageDressing.new(look, _blockers, _roads, PLACES).dress()
+	VillageDressing.new(look, _blockers, _roads, look.profile.places).dress()
 	# Материалы правим после того, как всё построено: пройтись надо по готовой сцене.
 	VillageLook.polish_materials(self)
 	_build_ui()
@@ -65,15 +60,18 @@ func _ready() -> void:
 		_capture_shots()
 		return
 	Log.debug("perf village_build: %d мс" % (Time.get_ticks_msec() - started))
-	EventBus.notify("День %d в деревне. WASD — идти, Shift — бег, Ctrl — присед, пробел — прыжок, E — взаимодействие, Esc — курсор." % GameState.profile.day)
+	EventBus.notify("День %d, %s. WASD — идти, Shift — бег, Ctrl — присед, пробел — прыжок, E — взаимодействие, Esc — курсор, V — другая деревня." % [GameState.profile.day, look.profile.title])
 
 func _build_world() -> void:
-	look = VillageLook.new(self, YARD_LIMIT)
+	# Деревня выбирается по основному герою профиля: у каждого своё место.
+	var place_profile := VillageProfile.for_hero(GameState.profile.main_hero_id)
+	look = VillageLook.new(self, YARD_LIMIT, place_profile)
 	# Площадки выравниваются до генерации рельефа: дом, поставленный на склон,
 	# повис бы одним углом в воздухе.
-	for place: Vector2 in PLACES.values():
+	chapel_at = look.profile.chapel
+	for place: Vector2 in look.profile.places.values():
 		look.add_pad(place, PAD_RADIUS, PAD_BLEND)
-	look.add_pad(CHAPEL_CENTER, PAD_RADIUS, PAD_BLEND)
+	look.add_pad(chapel_at, PAD_RADIUS, PAD_BLEND)
 	# Коридоры улиц врезаются до генерации меша: положить дорогу на готовый
 	# рельеф — значит получить ленту, идущую волнами по холмам.
 	_roads = _street_lines()
@@ -86,7 +84,7 @@ func _build_world() -> void:
 	# постройки лишь приблизительно, и сквозь стены можно было пройти. Теперь
 	# столкновения считает физика по настоящей геометрии.
 	player = CharacterBody3D.new()
-	player.position = look.ground(SPAWN) + Vector3(0.0, BODY_HEIGHT * 0.5, 0.0)
+	player.position = look.ground(look.profile.spawn) + Vector3(0.0, BODY_HEIGHT * 0.5, 0.0)
 	player.floor_max_angle = deg_to_rad(50.0)
 	player.floor_snap_length = 0.6
 	var hull := CollisionShape3D.new()
@@ -130,19 +128,19 @@ func _build_stations() -> void:
 	var props := VillageProps.new(self, PLAYER_RADIUS)
 	var defs: Array[Dictionary] = [
 		{"id": &"forge", "name": "Кузница",
-			"pos": props.build_forge(look.ground(PLACES[&"forge"]))},
+			"pos": props.build_forge(look.ground(look.profile.places[&"forge"]))},
 		{"id": &"training", "name": "Тренировочный зал",
-			"pos": props.build_training(look.ground(PLACES[&"training"]))},
+			"pos": props.build_training(look.ground(look.profile.places[&"training"]))},
 		{"id": &"shop", "name": "Лавка",
-			"pos": props.build_shop(look.ground(PLACES[&"shop"]))},
+			"pos": props.build_shop(look.ground(look.profile.places[&"shop"]))},
 		{"id": &"garden", "name": "Сад",
-			"pos": props.build_garden(look.ground(PLACES[&"garden"]))},
+			"pos": props.build_garden(look.ground(look.profile.places[&"garden"]))},
 		{"id": &"storage", "name": "Склад",
-			"pos": props.build_storage(look.ground(PLACES[&"storage"]))},
+			"pos": props.build_storage(look.ground(look.profile.places[&"storage"]))},
 		{"id": &"descend", "name": "Спуск в Разлом",
-			"pos": props.build_descend(look.ground(PLACES[&"descend"]))},
+			"pos": props.build_descend(look.ground(look.profile.places[&"descend"]))},
 		{"id": &"altar", "name": "Алтарь",
-			"pos": look.ground(CHAPEL_CENTER + Vector2(0.0, 0.4)) + Vector3(0.0, 0.9, 0.0)},
+			"pos": look.ground(chapel_at) + Vector3(0.0, 0.9, 0.0)},
 	]
 	_blockers.append_array(props.blockers)
 	for def: Dictionary in defs:
@@ -170,22 +168,27 @@ func _build_stations() -> void:
 ## в ландшафт, потом по ним же кладётся мостовая и расставляется обстановка.
 func _street_lines() -> Array:
 	return [
-		PackedVector2Array([Vector2(0.0, 32.5), BRIDGE_SOUTH]),
-		PackedVector2Array([BRIDGE_NORTH, Vector2(0.0, 2.0), Vector2(1.0, -8.0),
+		PackedVector2Array([Vector2(0.0, 32.5), look.profile.bridge_a])
+			if look.profile.has_bridge
+			else PackedVector2Array([Vector2(0.0, 32.5), Vector2(0.0, 24.0)]),
+		PackedVector2Array([look.profile.bridge_b if look.profile.has_bridge
+			else Vector2(0.0, 24.0), Vector2(0.0, 2.0), Vector2(1.0, -8.0),
 			Vector2(0.0, -18.0), Vector2(0.0, -27.0)]),
-		PackedVector2Array([Vector2(0.0, 4.0), Vector2(-8.0, 4.5), PLACES[&"garden"]]),
-		PackedVector2Array([Vector2(0.0, 4.0), Vector2(8.0, 4.5), PLACES[&"storage"]]),
-		PackedVector2Array([Vector2(0.5, -8.0), Vector2(-7.0, -9.5), PLACES[&"forge"]]),
-		PackedVector2Array([Vector2(0.5, -8.0), Vector2(7.0, -9.5), PLACES[&"shop"]]),
-		PackedVector2Array([Vector2(0.0, -18.0), Vector2(-7.0, -21.0), PLACES[&"training"]]),
-		PackedVector2Array([Vector2(0.0, -18.0), Vector2(8.0, -21.0), CHAPEL_CENTER]),
+		PackedVector2Array([Vector2(0.0, 4.0), Vector2(-8.0, 4.5), look.profile.places[&"garden"]]),
+		PackedVector2Array([Vector2(0.0, 4.0), Vector2(8.0, 4.5), look.profile.places[&"storage"]]),
+		PackedVector2Array([Vector2(0.5, -8.0), Vector2(-7.0, -9.5), look.profile.places[&"forge"]]),
+		PackedVector2Array([Vector2(0.5, -8.0), Vector2(7.0, -9.5), look.profile.places[&"shop"]]),
+		PackedVector2Array([Vector2(0.0, -18.0), Vector2(-7.0, -21.0), look.profile.places[&"training"]]),
+		PackedVector2Array([Vector2(0.0, -18.0), Vector2(8.0, -21.0), chapel_at]),
 	]
 
 
 func _build_roads() -> void:
 	for line: PackedVector2Array in _roads:
 		look.build_road(line, 4.2 if line.size() > 2 else 3.6)
-	look.build_bridge(BRIDGE_SOUTH, BRIDGE_NORTH, 3.2)
+	# Мост только там, где улица пересекает воду.
+	if look.profile.has_bridge:
+		look.build_bridge(look.profile.bridge_a, look.profile.bridge_b, 3.2)
 
 func _build_ui() -> void:
 	ui = preload("res://game/ui/village_ui.gd").new()
@@ -272,6 +275,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		player.rotation.y -= motion.relative.x * MOUSE_SENSITIVITY
 		pitch = clampf(pitch - motion.relative.y * MOUSE_SENSITIVITY, -1.3, 1.3)
 		camera.rotation.x = pitch
+	if event.is_action_pressed("switch_hero") and not ui.has_modal():
+		_switch_hero()
+		return
 	if event.is_action_pressed("interact") and not _focused.is_empty() and not ui.has_modal():
 		_capture_mouse(false)
 		ui.open_station(StringName(_focused["id"]))
@@ -291,112 +297,32 @@ func resume_look() -> void:
 	_capture_mouse(true)
 
 # --- Часовня «Алтарь» ---
-# Отдельное помещение во дворе дома: четыре стены с дверным проёмом, крыша,
-# алтарный камень и тёплый свет. Стены держат игрока, войти можно только в проём.
 
-const CHAPEL_HALF := 2.6            # половина внутреннего размера, равна модулю кита
-const CHAPEL_WALL := 0.5
-const CHAPEL_HEIGHT := 3.6
-const DOORWAY_WIDTH := 2.6
-
-## Часовня собирается от нуля десятком вызовов кита, поэтому высоту площадки
-## добавляем целиком к готовым узлам: протаскивать смещение через каждый вызов
-## пришлось бы в двадцати местах.
+## Часовню собирает VillageGear: каменные стены на цоколе, арочный проём,
+## окна-бойницы, контрфорсы и та же кровля, что у домов. Из модулей кита
+## получалась коробка под плоской призмой — рядом с домами она читалась
+## как сарай, а не как святое место.
 func _build_chapel() -> void:
-	var base := look.height_at(CHAPEL_CENTER.x, CHAPEL_CENTER.y)
-	var first := get_child_count()
-	_build_chapel_geometry()
-	for i: int in range(first, get_child_count()):
-		var node := get_child(i)
-		if node is Node3D:
-			(node as Node3D).position.y += base
+	# Генератор со списком препятствий деревни: габариты часовни и её фонарей
+	# должны попасть туда же, куда и всё остальное.
+	var gear := VillageGear.new(self, VillageBuildings.new(self), look, _blockers)
+	gear.chapel(chapel_at, Vector2(7.0, 9.0), atan2(-chapel_at.x, -chapel_at.y))
 
-func _build_chapel_geometry() -> void:
-	var props := VillageProps.new(self, PLAYER_RADIUS)
-	if props.kit != null:
-		_build_chapel_kit(props)
-		_blockers.append_array(props.blockers)
-		return
-	var cx := CHAPEL_CENTER.x
-	var cz := CHAPEL_CENTER.y
-	var span := CHAPEL_HALF * 2.0
-	var stone := Color(0.21, 0.2, 0.22)
-	var floor_color := Color(0.28, 0.27, 0.26)
-	_box(Vector3(span, 0.1, span), Vector3(cx, 0.06, cz), floor_color)
-	var chapel_props := VillageProps.new(self, PLAYER_RADIUS)
-	chapel_props.gable_roof(Vector3(cx, CHAPEL_HEIGHT + 0.85, cz), Vector2(span, span), 1.7,
-		Color(0.19, 0.18, 0.2))
-	# Три глухие стены.
-	_box(Vector3(CHAPEL_WALL, CHAPEL_HEIGHT, span), Vector3(cx - CHAPEL_HALF, CHAPEL_HEIGHT * 0.5, cz), stone, true)
-	_box(Vector3(CHAPEL_WALL, CHAPEL_HEIGHT, span), Vector3(cx + CHAPEL_HALF, CHAPEL_HEIGHT * 0.5, cz), stone, true)
-	_box(Vector3(span, CHAPEL_HEIGHT, CHAPEL_WALL), Vector3(cx, CHAPEL_HEIGHT * 0.5, cz - CHAPEL_HALF), stone, true)
-	# Четвёртая — с проёмом наружу, во двор.
-	var piece := (span - DOORWAY_WIDTH) * 0.5
-	var edge := cx - CHAPEL_HALF
-	_box(Vector3(piece, CHAPEL_HEIGHT, CHAPEL_WALL),
-		Vector3(edge + piece * 0.5, CHAPEL_HEIGHT * 0.5, cz + CHAPEL_HALF), stone, true)
-	_box(Vector3(piece, CHAPEL_HEIGHT, CHAPEL_WALL),
-		Vector3(cx + CHAPEL_HALF - piece * 0.5, CHAPEL_HEIGHT * 0.5, cz + CHAPEL_HALF), stone, true)
-	# Перемычка над проёмом — чтобы дверь читалась как дверь.
-	_box(Vector3(DOORWAY_WIDTH, 0.7, CHAPEL_WALL),
-		Vector3(cx, CHAPEL_HEIGHT - 0.35, cz + CHAPEL_HALF), stone)
-	# Алтарный камень у дальней стены и свет над ним.
-	_box(Vector3(2.2, 1.0, 1.0), Vector3(cx, 0.5, cz - 2.1), Color(0.62, 0.58, 0.5), true)
-	_box(Vector3(1.4, 0.18, 0.6), Vector3(cx, 1.09, cz - 2.1), Color(0.85, 0.78, 0.55))
-	for side: float in [-1.0, 1.0]:
-		_box(Vector3(0.4, 1.8, 0.4), Vector3(cx + side * 2.4, 0.9, cz - 2.1), stone, true)
-	var glow := OmniLight3D.new()
-	glow.position = Vector3(cx, 2.4, cz - 2.0)
-	glow.light_color = Color(1.0, 0.82, 0.55)
-	glow.light_energy = 2.6
-	glow.omni_range = 9.0
-	glow.shadow_enabled = false
-	add_child(glow)
-
-## Часовня на кладбищенском ките: каменные стены с проёмом, колонны, алтарь,
-## свечи и скамьи. Помещение остаётся проходимым — внутрь надо входить.
-func _build_chapel_kit(props: VillageProps) -> void:
-	var kit := props.kit
-	var unit := VillageKit.KIT_SCALE
-	var center := Vector3(CHAPEL_CENTER.x, 0.0, CHAPEL_CENTER.y)
-	var cell := center / unit
-	var half := 1.0
-	props.box(Vector3(3.0 * unit, 0.12, 3.0 * unit), center + Vector3(0.0, 0.06, 0.0),
-		Color(0.3, 0.29, 0.28))
-	# Стены в два ряда, в южной стене — проём.
-	for level: int in 2:
-		var y := 0.73 * float(level)
-		kit.stone_run(cell + Vector3(-half, y, -half), 0, 3)
-		kit.stone_run(cell + Vector3(-half, y, half), 2, 3, -1 if level == 1 else 1)
-		kit.stone_run(cell + Vector3(-half, y, -half), 1, 3)
-		kit.stone_run(cell + Vector3(half, y, -half), 3, 3)
-	for sx: float in [-1.0, 1.0]:
-		for sz: float in [-1.0, 1.0]:
-			props.box(Vector3(0.6, 3.4, 0.6),
-				center + Vector3(sx * half * unit, 1.7, sz * half * unit), Color(0.34, 0.33, 0.31))
-	props.block_rect(center + Vector3(0.0, 0.0, -half * unit), Vector2(3.0 * unit, 0.6))
-	for sx: float in [-1.0, 1.0]:
-		props.block_rect(center + Vector3(sx * half * unit, 0.0, 0.0), Vector2(0.6, 3.0 * unit))
-	props._kit_roof(center + Vector3(0.0, 1.55 * unit, 0.0), Vector2(3.2, 3.2), 1.4,
-		Color(0.22, 0.21, 0.24))
-	# Убранство: алтарь, свечи, крест, скамьи, светильники у входа.
-	var altar := center + Vector3(0.0, 0.0, -1.6)
-	# Алтарь, свечи и крест собирает VillageGear: модель из кладбищенского кита
-	# была плоской заливкой и рядом с кладкой часовни выбивалась сильнее всего.
-	kit.gear().altar(Vector2(altar.x, altar.z), 0.0)
-	for i: int in 2:
-		for sx: float in [-1.0, 1.0]:
-			kit.gear().bench(Vector2(center.x + sx * 1.6, center.z + 0.6 + float(i) * 1.6), 0.0)
-	for sx: float in [-1.0, 1.0]:
-		kit.gear().lamp_post(Vector2(center.x + sx * 3.4, center.z + 4.6))
-	props.block_rect(altar, Vector2(2.8, 1.8))
-	var glow_light := OmniLight3D.new()
-	glow_light.position = altar + Vector3(0.0, 2.2, 0.6)
-	glow_light.light_color = Color(1.0, 0.82, 0.55)
-	glow_light.light_energy = 2.8
-	glow_light.omni_range = 10.0
-	glow_light.shadow_enabled = false
-	add_child(glow_light)
+## Смена основного героя по V, а вместе с ним и деревни: у каждого своё место.
+## Не Tab: его перехватывают Control-узлы для перехода по фокусу, и до
+## _unhandled_input он не доходит.
+## Меняем только поле профиля и перестраиваем сцену — прогресс при этом цел.
+## Стартовый бонус к характеристике остаётся у того, кому был выдан при создании
+## профиля: это бонус за начало игры, а не за то, кем сейчас ходишь.
+func _switch_hero() -> void:
+	var order := VillageProfile.all_ids()
+	var at := order.find(GameState.profile.main_hero_id)
+	var next: StringName = order[(at + 1) % order.size()]
+	GameState.profile.main_hero_id = next
+	_capture_mouse(false)
+	var place := VillageProfile.for_hero(next)
+	EventBus.notify("Переход: %s" % place.title)
+	SceneRouter.reload("Дорога в %s…" % place.title)
 
 ## Режим съёмки: игра сама рендерит кадры из заданных точек и выходит. Снимать
 ## окно с экрана оказалось ненадёжно — фокус уходит другим приложениям, — а

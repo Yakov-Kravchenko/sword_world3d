@@ -21,33 +21,24 @@ const TERRAIN_CELLS := 340
 
 ## Двор больше не идеально плоский: под ногами пологая волна. Ровными остаются
 ## только площадки под постройки — их выравнивает add_pad.
-const YARD_RELIEF := 2.8
 const HILL_FADE := 60.0
-const HILL_HEIGHT := 9.0
 const FLAT_MARGIN := 5.0
-const MOUNTAIN_START := 60.0
-const MOUNTAIN_FADE := 185.0
-const MOUNTAIN_HEIGHT := 195.0
 
 ## Река. Уровень воды ниже нуля, а рельеф двора всегда неотрицательный —
 ## поэтому вода стоит только в прорезанном русле и не разливается лужами.
-const WATER_LEVEL := -0.3
-const RIVER_HALF := 6.0
-const RIVER_BANK := 6.5
-const RIVER_DEPTH := 1.2
 
 ## Ограда двора — низкий вал, а не глухая стена в 6 метров: с уровня глаз
 ## (камера на 1.7 м) стена закрывала бы и лес, и горы, ради которых всё это.
 const RAMPART_HEIGHT := 2.4
 
 ## Выше границы леса деревья не растут — так хребет читается как хребет.
-const TREE_LINE := 46.0
 
 ## Последний созданный ландшафт. Нужен генераторам утвари: они создаются
 ## глубоко внутри построек, куда ссылку иначе пришлось бы тащить через пять
 ## слоёв вызовов.
 static var current: VillageLook
 
+var profile: VillageProfile
 var root: Node3D
 var yard: float
 var rng: RandomNumberGenerator
@@ -68,7 +59,8 @@ var _river_bounds := Rect2()
 var _road_mat: StandardMaterial3D
 
 
-func _init(parent: Node3D, yard_limit: float) -> void:
+func _init(parent: Node3D, yard_limit: float, village: VillageProfile) -> void:
+	profile = village
 	root = parent
 	yard = yard_limit
 	current = self
@@ -88,7 +80,7 @@ func _init(parent: Node3D, yard_limit: float) -> void:
 	_hills.seed = 11
 	_ridges = FastNoiseLite.new()
 	_ridges.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	_ridges.frequency = 0.0026
+	_ridges.frequency = 0.0019
 	_ridges.fractal_octaves = 3
 	_ridges.fractal_gain = 0.45
 	_ridges.seed = 29
@@ -120,12 +112,9 @@ func build() -> void:
 ## Русло задано ломаной и уходит далеко за границы двора: река, обрывающаяся
 ## у ограды, сразу выдаёт декорацию.
 func _build_river_path() -> void:
-	_river = PackedVector2Array([
-		Vector2(-90.0, 30.0), Vector2(-52.0, 24.0), Vector2(-24.0, 20.0),
-		Vector2(0.0, 18.0), Vector2(24.0, 20.0), Vector2(52.0, 26.0),
-		Vector2(92.0, 34.0)])
+	_river = profile.river
 	_river = _smooth(_river, 2)
-	_river_bounds = _bounds_of(_river).grow(RIVER_HALF + RIVER_BANK + 2.0)
+	_river_bounds = _bounds_of(_river).grow(profile.river_half + profile.river_bank + 2.0)
 
 
 ## Площадка под постройку: круг, выровненный в одну высоту, с плавным съездом.
@@ -156,15 +145,21 @@ func _natural(x: float, z: float) -> float:
 	# на границе появляется заметный уступ.
 	# Смещение вверх: двор должен лежать выше полосы прибрежной грязи, иначе
 	# шейдер красит грязью весь посёлок.
-	var base := 1.1 + (_yard_noise.get_noise_2d(x, z) * 0.5 + 0.5) * YARD_RELIEF
+	var base := profile.yard_base + (_yard_noise.get_noise_2d(x, z) * 0.5 + 0.5) * profile.yard_relief
 	var hill_t := clampf((r - (yard + FLAT_MARGIN)) / HILL_FADE, 0.0, 1.0)
-	var hills := _hills.get_noise_2d(x, z) * HILL_HEIGHT * hill_t * hill_t
-	var mount_t := clampf((r - (yard + MOUNTAIN_START)) / MOUNTAIN_FADE, 0.0, 1.0)
+	var hills := _hills.get_noise_2d(x, z) * profile.hill_height * hill_t * hill_t
+	var mount_t := clampf((r - (yard + profile.mountain_start)) / profile.mountain_fade, 0.0, 1.0)
 	# Модуль шума даёт острые гребни вместо мягких куполов, степень их заостряет:
 	# без этого «горы» выглядят как холмы, только выше.
 	var ridge := 1.0 - absf(_ridges.get_noise_2d(x, z))
-	ridge = pow(ridge, 2.0)
-	return base + hills + ridge * MOUNTAIN_HEIGHT * mount_t * mount_t
+	# Показатель 1.35 вместо 2.0 расширяет гребни в массивы: в квадрате они
+	# вытягивались в частокол одинаковых игл.
+	ridge = pow(ridge, 1.35)
+	# Крупная маска собирает вершины в группы и оставляет между ними перевалы —
+	# без неё хребет идёт сплошной ровной стеной по всему горизонту.
+	var massif := 0.55 + 0.45 * (_hills.get_noise_2d(x * 0.22, z * 0.22) * 0.5 + 0.5)
+	ridge *= massif
+	return base + hills + ridge * profile.mountain_height * mount_t * mount_t
 
 
 func _apply_pads(x: float, z: float, h: float) -> float:
@@ -190,12 +185,12 @@ func _apply_river(x: float, z: float, h: float) -> float:
 	if not _river_bounds.has_point(point):
 		return h
 	var d := river_distance(point)
-	var bed := WATER_LEVEL - RIVER_DEPTH
-	if d <= RIVER_HALF:
+	var bed := profile.water_level - profile.river_depth
+	if d <= profile.river_half:
 		return minf(h, bed)
-	if d >= RIVER_HALF + RIVER_BANK:
+	if d >= profile.river_half + profile.river_bank:
 		return h
-	var t := (d - RIVER_HALF) / RIVER_BANK
+	var t := (d - profile.river_half) / profile.river_bank
 	t = t * t * (3.0 - 2.0 * t)
 	return minf(h, lerpf(bed, h, t))
 
@@ -359,7 +354,7 @@ func _apply_paths(x: float, z: float, h: float) -> float:
 ## только запасным вариантом: если папки с текстурами нет, деревня всё равно
 ## должна строиться, а не падать.
 func _terrain_material() -> Material:
-	if not ResourceLoader.exists(TERRAIN_SHADER) or _tex("forest_ground_04", "diff") == null:
+	if not ResourceLoader.exists(TERRAIN_SHADER) or _tex(profile.ground_set, "diff") == null:
 		var fallback := StandardMaterial3D.new()
 		fallback.albedo_texture = _noise_texture(0.009, [
 			Color(0.16, 0.20, 0.09), Color(0.27, 0.31, 0.15), Color(0.36, 0.38, 0.21)])
@@ -372,15 +367,18 @@ func _terrain_material() -> Material:
 	mat.shader = load(TERRAIN_SHADER)
 	# Основа земли — лесная подстилка: aerial_grass_rock снят с высоты и вблизи
 	# читается как сухой песок.
-	_bind(mat, "grass", "forest_ground_04")
-	_bind(mat, "rock", "cliff_side")
+	_bind(mat, "grass", profile.ground_set)
+	_bind(mat, "rock", profile.rock_set)
 	_bind(mat, "snow", "snow_02")
-	_bind(mat, "dirt", "brown_mud_03")
+	_bind(mat, "dirt", profile.dirt_set)
 	# Снеговая линия выше границы леса: белыми должны быть только вершины.
-	mat.set_shader_parameter("snow_line", 92.0)
-	mat.set_shader_parameter("snow_fade", 34.0)
+	mat.set_shader_parameter("snow_line", profile.snow_line)
+	mat.set_shader_parameter("grass_tint", profile.grass_tint)
+	mat.set_shader_parameter("dirt_tint", profile.dirt_tint)
+	mat.set_shader_parameter("rock_tint", profile.rock_tint)
+	mat.set_shader_parameter("snow_fade", profile.snow_fade)
 	mat.set_shader_parameter("rock_slope", 0.42)
-	mat.set_shader_parameter("dirt_level", WATER_LEVEL + 0.5)
+	mat.set_shader_parameter("dirt_level", profile.water_level + 0.5)
 	return mat
 
 
@@ -428,7 +426,7 @@ func _pbr(set_name: String, scale: float, fallback: Color) -> StandardMaterial3D
 # у моста — дугой между берегами.
 
 func _build_water() -> void:
-	var mesh := _ribbon(_river, (RIVER_HALF + 1.2) * 2.0, WATER_LEVEL, 0.0)
+	var mesh := _ribbon(_river, (profile.river_half + 1.2) * 2.0, profile.water_level, 0.0)
 	if mesh == null:
 		return
 	var node := MeshInstance3D.new()
@@ -471,7 +469,7 @@ func build_road(points: PackedVector2Array, width: float = 3.4) -> void:
 func build_bridge(a: Vector2, b: Vector2, width: float = 3.0) -> void:
 	var ya := height_at(a.x, a.y)
 	var yb := height_at(b.x, b.y)
-	var peak := WATER_LEVEL + 2.0
+	var peak := profile.water_level + 2.0
 	var steps := 18
 	var deck := PackedVector3Array()
 	for i: int in steps + 1:
@@ -517,9 +515,9 @@ func build_bridge(a: Vector2, b: Vector2, width: float = 3.0) -> void:
 			var pillar_mesh := CylinderMesh.new()
 			pillar_mesh.top_radius = 0.24
 			pillar_mesh.bottom_radius = 0.3
-			pillar_mesh.height = top.y - (WATER_LEVEL - RIVER_DEPTH)
+			pillar_mesh.height = top.y - (profile.water_level - profile.river_depth)
 			pillar.mesh = pillar_mesh
-			pillar.position = Vector3(top.x, (top.y + WATER_LEVEL - RIVER_DEPTH) * 0.5,
+			pillar.position = Vector3(top.x, (top.y + profile.water_level - profile.river_depth) * 0.5,
 				top.z) + side * s * 0.8
 			pillar.material_override = wood
 			root.add_child(pillar)
@@ -657,7 +655,7 @@ func _build_environment() -> void:
 	e.ambient_light_sky_contribution = 1.0
 	# Затенённые стены при 0.45 уходили в чёрное — северный день пасмурный,
 	# но не беспросветный.
-	e.ambient_light_energy = 0.85
+	e.ambient_light_energy = profile.ambient
 	e.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 
 	# Без тонмаппинга яркие места просто упираются в белый, и картинка выглядит
@@ -699,10 +697,10 @@ func _build_environment() -> void:
 	# читаемым. Без этого хребет выглядит нарисованным на заднике.
 	e.fog_enabled = true
 	e.fog_mode = Environment.FOG_MODE_EXPONENTIAL
-	e.fog_light_color = Color(0.55, 0.65, 0.79)
+	e.fog_light_color = profile.fog_color
 	e.fog_light_energy = 1.0
 	e.fog_sun_scatter = 0.28
-	e.fog_density = 0.00035
+	e.fog_density = profile.fog_density
 	e.fog_aerial_perspective = 0.12
 	e.fog_sky_affect = 0.05
 	e.fog_height = 4.0
@@ -710,7 +708,7 @@ func _build_environment() -> void:
 
 	e.volumetric_fog_enabled = true
 	e.volumetric_fog_density = 0.0015
-	e.volumetric_fog_albedo = Color(0.80, 0.86, 0.94)
+	e.volumetric_fog_albedo = profile.fog_color.lightened(0.25)
 	e.volumetric_fog_gi_inject = 0.8
 	e.volumetric_fog_ambient_inject = 0.2
 	e.volumetric_fog_anisotropy = 0.35
@@ -728,7 +726,7 @@ func _build_environment() -> void:
 	e.adjustment_brightness = 1.0
 	e.adjustment_contrast = 1.12
 	# Палитра Скайрима холодная и приглушённая: сочная зелень выдаёт мультик.
-	e.adjustment_saturation = 0.78
+	e.adjustment_saturation = profile.saturation
 
 	env.environment = e
 	root.add_child(env)
@@ -743,6 +741,9 @@ func _build_sky() -> Sky:
 	if ResourceLoader.exists(SKY_SHADER):
 		var mat := ShaderMaterial.new()
 		mat.shader = load(SKY_SHADER)
+		mat.set_shader_parameter("zenith_color", profile.sky_zenith)
+		mat.set_shader_parameter("horizon_color", profile.sky_horizon)
+		mat.set_shader_parameter("cloud_cover", profile.cloud_cover)
 		sky.sky_material = mat
 	else:
 		sky.sky_material = PhysicalSkyMaterial.new()
@@ -753,9 +754,9 @@ func _build_sun() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.name = "Sun"
 	# Низкое солнце сбоку: длинные тени показывают рельеф, зенитное — стирает его.
-	sun.rotation_degrees = Vector3(-47.0, 138.0, 0.0)
-	sun.light_color = Color(1.0, 0.94, 0.85)
-	sun.light_energy = 2.4
+	sun.rotation_degrees = profile.sun_angle
+	sun.light_color = profile.sun_color
+	sun.light_energy = profile.sun_energy
 	# Угловой размер диска задаёт мягкость края тени. При нуле тень абсолютно
 	# резкая, и сразу видно, что свет ненастоящий.
 	sun.light_angular_distance = 0.7
@@ -791,7 +792,7 @@ func _build_rampart() -> void:
 		var count := int(a.distance_to(b) / step)
 		for s: int in count:
 			var p := a.lerp(b, (float(s) + 0.5) / float(count))
-			if river_distance(p) < RIVER_HALF + 3.0:
+			if river_distance(p) < profile.river_half + 3.0:
 				continue
 			var mesh := BoxMesh.new()
 			# Секция уходит на два метра в землю: на неровностях иначе видны щели.
@@ -819,21 +820,21 @@ func _scatter_trees() -> void:
 		"tree_pineDefaultA", "tree_oak", "tree_default"]
 	var placed := 0
 	var attempts := 0
-	while placed < 300 and attempts < 9000:
+	while placed < profile.tree_count and attempts < profile.tree_count * 30:
 		attempts += 1
 		var spot := _spot(yard + 9.0, 165.0)
-		if spot.y > TREE_LINE or slope_at(spot.x, spot.z) > 0.42:
+		if spot.y > profile.tree_line or slope_at(spot.x, spot.z) > 0.42:
 			continue
 		if _forest.get_noise_2d(spot.x, spot.z) < -0.02:
 			continue
 		# В реку деревья не сажаем.
-		if river_distance(Vector2(spot.x, spot.z)) < RIVER_HALF + 3.0:
+		if river_distance(Vector2(spot.x, spot.z)) < profile.river_half + 3.0:
 			continue
 		# Вблизи ставим процедурную ель: гранёный конус кита в двадцати метрах от
 		# игрока и делал картинку игрушечной. Дальше он читается силуэтом, и разница
 		# уже не видна — а тысяча ярусов на дальний лес стоила бы кадров.
 		if Vector2(spot.x, spot.z).length() < yard + 70.0:
-			gear().conifer(Vector2(spot.x, spot.z), rng.randf_range(8.0, 16.0), rng.randi())
+			gear().conifer(Vector2(spot.x, spot.z), rng.randf_range(profile.tree_height.x, profile.tree_height.y), rng.randi())
 			placed += 1
 			continue
 		var model: String = models[rng.randi() % models.size()]
@@ -870,7 +871,7 @@ func _scatter_grass() -> void:
 	var mesh := VillageGear.grass_tuft(rng)
 	if mesh == null:
 		return
-	var target := 6000
+	var target := profile.grass_count
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.mesh = mesh
@@ -884,9 +885,9 @@ func _scatter_grass() -> void:
 		# Двор засевает VillageDressing: там нужно обходить постройки и дороги,
 		# а список препятствий появляется только после их постройки.
 		var spot := _spot(yard + 3.0, 95.0)
-		if spot.y > TREE_LINE or slope_at(spot.x, spot.z) > 0.40:
+		if spot.y > profile.tree_line or slope_at(spot.x, spot.z) > 0.40:
 			continue
-		if spot.y < WATER_LEVEL + 0.2:
+		if spot.y < profile.water_level + 0.2:
 			continue
 		var height := rng.randf_range(0.35, 0.7)
 		var basis := Basis(Vector3.UP, rng.randf() * TAU)
@@ -1105,7 +1106,7 @@ func _build_palette() -> void:
 	foliage = _flat(Color(0.13, 0.23, 0.10))
 	bark = _flat(Color(0.17, 0.12, 0.09))
 	stone = _flat(Color(0.33, 0.32, 0.30))
-	grass_mat = _flat(Color(0.32, 0.38, 0.17))
+	grass_mat = _flat(profile.grass_colour)
 
 
 func _flat(color: Color) -> StandardMaterial3D:
@@ -1150,6 +1151,8 @@ func grass_blade_material() -> Material:
 		return grass_mat
 	var mat := ShaderMaterial.new()
 	mat.shader = load(GRASS_SHADER)
+	# Цвет стеблей лежит в вершинах, поэтому профиль задаёт множитель.
+	mat.set_shader_parameter("tint", profile.grass_colour * 3.0)
 	return mat
 
 

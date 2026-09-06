@@ -52,3 +52,14 @@ func goto_village() -> void:
 
 func goto_dungeon(message: String = "Спуск по лестнице…") -> void:
 	goto(DUNGEON, message)
+
+
+## Перестроить текущую сцену тем же экраном загрузки. Нужна при смене основного
+## героя: деревня у каждого своя, и goto() на тот же путь сам по себе
+## отсекается защитой от повторного перехода.
+func reload(message: String = "Загрузка…") -> void:
+	var scene := get_tree().current_scene
+	if scene == null or scene.scene_file_path.is_empty():
+		return
+	current_path = ""
+	goto(scene.scene_file_path, message)

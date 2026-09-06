@@ -9,6 +9,9 @@ render_mode cull_disabled, diffuse_burley, specular_disabled;
 uniform float sway : hint_range(0.0, 1.0) = 0.22;
 uniform float speed : hint_range(0.1, 4.0) = 1.5;
 uniform vec3 wind_dir = vec3(1.0, 0.0, 0.35);
+// Оттенок задаётся профилем деревни: цвет стеблей лежит в вершинах меша, и без
+// множителя трава в снегах осталась бы такой же жёлтой, как на равнине.
+uniform vec3 tint : source_color = vec3(1.0, 1.0, 1.0);
 
 void vertex() {
 	vec3 origin = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
@@ -22,7 +25,7 @@ void vertex() {
 }
 
 void fragment() {
-	ALBEDO = COLOR.rgb;
+	ALBEDO = COLOR.rgb * tint;
 	ROUGHNESS = 0.95;
 	// Свет сквозь стебель: без подсветки на просвет трава выглядит пластиковой.
 	BACKLIGHT = vec3(0.22, 0.30, 0.14);
