@@ -26,13 +26,14 @@ static func _load_aliases() -> void:
 	file.close()
 	if parsed is Dictionary:
 		for key: Variant in (parsed as Dictionary).keys():
-			if not String(key).begins_with("_"):
-				_aliases[String(key)] = String((parsed as Dictionary)[key])
+			if String(key).begins_with("_folder_") or not String(key).begins_with("_"):
+				# Значение остаётся как есть: строки — пути, числа — масштаб и доворот.
+				_aliases[String(key)] = (parsed as Dictionary)[key]
 
 ## Путь к модели или пустая строка, если её нет.
 static func find(category: String, model_name: String) -> String:
 	_load_aliases()
-	if _aliases.has(model_name):
+	if _aliases.has(model_name) and _aliases[model_name] is String:
 		for extension: String in EXTENSIONS:
 			var aliased: String = ROOT + String(_aliases[model_name]) + extension
 			if ResourceLoader.exists(aliased):
@@ -56,6 +57,21 @@ static func instantiate(category: String, model_name: String) -> Node3D:
 		return null
 	var node: Variant = (packed as PackedScene).instantiate()
 	return node if node is Node3D else null
+
+## Модель в узле-держателе: доворот и масштаб кита лежат на вложенном узле,
+## поэтому игровой код крутит и двигает держатель как обычный Node3D, ничего не
+## зная про особенности конкретного набора моделей.
+static func build(category: String, model_name: String) -> Node3D:
+	var model := instantiate(category, model_name)
+	if model == null:
+		return null
+	var root := Node3D.new()
+	model.rotation.y = deg_to_rad(model_yaw(model_name))
+	var factor := model_scale(model_name)
+	if not is_equal_approx(factor, 1.0):
+		model.scale = Vector3.ONE * factor
+	root.add_child(model)
+	return root
 
 ## Габариты модели в плане — нужны, чтобы построить препятствие под неё.
 static func footprint(node: Node3D) -> AABB:
@@ -94,18 +110,42 @@ static func _all_children(node: Node) -> Array[Node]:
 static func expected() -> Dictionary:
 	return {
 		"village": ["forge", "training", "shop", "garden", "storage", "descend", "chapel"],
-		"actors": ["hald", "irma", "vern", "mara", "enemy_default"],
+		"actors": ["hald", "irma", "vern", "mara", "skeleton_warrior", "bone_archer",
+			"bone_legionnaire", "lich_acolyte", "ghoul", "enemy_default"],
+		"props": ["chest_common", "chest_treasure"],
 	}
 
-## Модель под нужный рост: киты сделаны в своём масштабе, поэтому подгоняем по
-## высоте габаритов, а не подбираем множитель руками для каждого файла.
 ## Масштаб модели берётся из таблицы соответствий: автоматический замер габарита
 ## у моделей из китов ненадёжен — внутри встречаются служебные узлы с огромным
-## bounding box. Ключ "<id>_scale" в aliases.json задаёт множитель.
+## bounding box. Ключ "<id>_scale" в aliases.json задаёт множитель для одного
+## персонажа, "_folder_scale" — для всего кита.
 static func model_scale(model_name: String) -> float:
 	_load_aliases()
 	var key := model_name + "_scale"
-	return float(_aliases[key]) if _aliases.has(key) else 1.0
+	if _aliases.has(key):
+		return float(_aliases[key])
+	return _folder_number(model_name, "_folder_scale", 1.0)
+
+## Значение по умолчанию для всего кита: масштаб и разворот — свойство набора
+## моделей, а не конкретного персонажа, поэтому дублировать их на каждый id
+## незачем. Ключ "_folder_scale" / "_folder_yaw" — папка внутри assets/models.
+static func _folder_number(model_name: String, table: String, fallback: float) -> float:
+	if not (_aliases.has(table) and _aliases[table] is Dictionary):
+		return fallback
+	var path := String(_aliases[model_name]) if _aliases.has(model_name) else ""
+	var folder := path.get_base_dir()
+	var folders: Dictionary = _aliases[table]
+	return float(folders[folder]) if folders.has(folder) else fallback
+
+## Разворот модели вокруг Y в градусах. В Godot «перёд» узла — это -Z, а модели
+## из китов обычно смотрят в +Z, поэтому по умолчанию их надо развернуть на 180:
+## иначе персонаж идёт спиной вперёд и смотрит в камеру.
+static func model_yaw(model_name: String) -> float:
+	_load_aliases()
+	var key := model_name + "_yaw"
+	if _aliases.has(key):
+		return float(_aliases[key])
+	return _folder_number(model_name, "_folder_yaw", 180.0)
 
 ## Подгонка роста уже добавленной в дерево модели. Мерить надо именно здесь:
 ## у моделей из китов масштаб раскидан по узлам, и вне дерева габарит врёт.

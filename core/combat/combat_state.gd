@@ -22,6 +22,10 @@ var combat_index: int = 0
 ## Справочники контента, переданные игровым слоем (core не знает про автозагрузки).
 var status_db: Dictionary = {}
 var spell_db: Dictionary = {}
+## Отладочный урон: если больше нуля, любая атака и любое заклинание наносят
+## столько вместо своего броска. Ставится игровым слоем — core про режим
+## разработчика ничего не знает, для него это просто число.
+var dev_damage: int = 0
 
 func add_actor(actor: CombatActor) -> void:
 	actors[actor.id] = actor

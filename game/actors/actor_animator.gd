@@ -17,8 +17,14 @@ var _arm_left: Node3D
 var _legs: Array[Node3D] = []
 var _busy: bool = false
 var _player: AnimationPlayer
+var _moving: bool = false
 
 static func attach(target: Node3D) -> ActorAnimator:
+	# Один аниматор на модель: в бою и в исследовании узел героя один и тот же,
+	# а два аниматора дрались бы за один AnimationPlayer.
+	var existing := target.get_node_or_null("Animator")
+	if existing is ActorAnimator:
+		return existing as ActorAnimator
 	var animator := ActorAnimator.new()
 	animator.name = "Animator"
 	animator.model = target
@@ -41,18 +47,28 @@ func _clip(candidates: Array[String]) -> String:
 	if _player == null:
 		return ""
 	var list := _player.get_animation_list()
+	# Сначала точное совпадение: иначе "idle" поймает "2H_Melee_Idle", который
+	# идёт раньше по алфавиту, чем нужный "Idle".
+	for wanted: String in candidates:
+		for name: String in list:
+			if name.to_lower() == wanted:
+				return name
 	for wanted: String in candidates:
 		for name: String in list:
 			if name.to_lower().contains(wanted):
 				return name
 	return ""
 
-func _play_clip(candidates: Array[String], loop: bool = false) -> bool:
+func _play_clip(candidates: Array[String], loop: bool = false,
+		hold: bool = false) -> bool:
 	var name := _clip(candidates)
 	if name.is_empty():
 		return false
 	_player.speed_scale = speed
 	_player.play(name)
+	if hold:
+		_busy = true
+		return true
 	if not loop:
 		_busy = true
 		var duration := _player.get_animation(name).length / maxf(0.1, speed)
@@ -91,7 +107,7 @@ func face(target: Vector3) -> void:
 ## Замах и удар оружием.
 func play_attack(target: Vector3, crit: bool = false) -> void:
 	face(target)
-	if _play_clip(["attack", "hit", "punch"]):
+	if _play_clip(["1h_melee_attack_chop", "melee_attack", "attack", "punch"]):
 		return
 	if _arm_right == null:
 		return
@@ -111,7 +127,7 @@ func play_attack(target: Vector3, crit: bool = false) -> void:
 func play_cast(target: Vector3, color: Color = Color(0.6, 0.7, 1.0)) -> void:
 	face(target)
 	var spark := _make_spark(color)
-	if _play_clip(["attack", "cast", "interact"]):
+	if _play_clip(["spellcast_shoot", "spellcast", "cast", "attack"]):
 		model.get_tree().create_timer(0.6 / maxf(0.1, speed)).timeout.connect(func() -> void:
 			if is_instance_valid(spark):
 				spark.queue_free())
@@ -155,6 +171,8 @@ func _make_spark(color: Color) -> Node3D:
 
 ## Вздрагивание от урона.
 func play_hurt() -> void:
+	if _play_clip(["hit_a", "hit_", "hurt"]):
+		return
 	if _torso == null:
 		return
 	var tween := model.create_tween()
@@ -164,6 +182,10 @@ func play_hurt() -> void:
 ## Падение: фигура заваливается вперёд и оседает.
 func play_die() -> void:
 	_busy = true
+	# Клип смерти держим на последнем кадре: тело остаётся лежать, а не встаёт
+	# обратно в стойку.
+	if _play_clip(["death_a", "death", "die"], false, true):
+		return
 	var tween := model.create_tween()
 	tween.set_ease(Tween.EASE_IN)
 	tween.tween_property(model, "rotation:x", deg_to_rad(-88.0), 0.4 / speed)
@@ -171,7 +193,7 @@ func play_die() -> void:
 
 ## Шаг: лёгкое покачивание ногами на время перемещения.
 func play_step(duration: float) -> void:
-	if _play_clip(["walk", "run"], true):
+	if _play_clip(["walking_a", "walk", "running_a", "run"], true):
 		model.get_tree().create_timer(duration).timeout.connect(func() -> void:
 			var idle := _clip(["idle"])
 			if not idle.is_empty() and is_instance_valid(_player):
@@ -190,3 +212,17 @@ func play_step(duration: float) -> void:
 	reset.tween_interval(duration)
 	reset.tween_property(_legs[0], "rotation:x", 0.0, 0.1)
 	reset.parallel().tween_property(_legs[1], "rotation:x", 0.0, 0.1)
+
+## Непрерывная ходьба в режиме исследования: клип переключается только на смене
+## состояния, иначе AnimationPlayer каждый кадр начинал бы анимацию заново.
+func set_moving(moving: bool) -> void:
+	if moving == _moving:
+		return
+	_moving = moving
+	if _player == null or _busy:
+		return
+	var wanted := _clip(["walking_a", "walk", "running_a", "run"]) if moving else _clip(["idle"])
+	if wanted.is_empty():
+		return
+	_player.speed_scale = speed
+	_player.play(wanted)

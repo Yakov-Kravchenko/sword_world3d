@@ -5,6 +5,10 @@ extends Control
 const SMALL := Vector2(280.0, 280.0)
 const LARGE := Vector2(760.0, 720.0)
 const PADDING := 14.0
+## Колонка под легенду на развёрнутой карте: карта в неё не заезжает, поэтому
+## обозначения ничего не перекрывают.
+const LEGEND_WIDTH := 238.0
+const HINT_HEIGHT := 22.0
 
 const COLOR_BG := Color(0.06, 0.06, 0.08, 0.88)
 const COLOR_UNKNOWN := Color(0.18, 0.18, 0.21)
@@ -15,6 +19,8 @@ const COLOR_CORRIDOR := Color(0.24, 0.24, 0.26)
 const COLOR_ENTRANCE := Color(0.42, 0.78, 0.45)
 const COLOR_EXIT := Color(0.92, 0.72, 0.3)
 const COLOR_PARTY := Color(0.95, 0.95, 0.92)
+const COLOR_CHEST := Color(0.72, 0.62, 0.38)
+const COLOR_PROP := Color(0.45, 0.6, 0.72)
 
 var service: RunService
 var plan: FloorPlan
@@ -63,15 +69,21 @@ func set_party_cell(cell: Vector2i) -> void:
 func refresh() -> void:
 	queue_redraw()
 
+## Поле под саму карту: развёрнутая отдаёт колонку справа под легенду,
+## свёрнутая — полоску снизу под подсказку «M — крупная карта».
+func _map_area() -> Vector2:
+	var reserved := Vector2(LEGEND_WIDTH, 0.0) if expanded else Vector2(0.0, HINT_HEIGHT)
+	return size - Vector2(PADDING, PADDING) * 2.0 - reserved
+
 ## Перевод клетки этажа в координаты внутри виджета.
 func _to_local(cell: Vector2) -> Vector2:
-	var inner := size - Vector2(PADDING, PADDING) * 2.0 - Vector2(0.0, 22.0)
+	var inner := _map_area()
 	var scale_factor := minf(inner.x / _bounds.size.x, inner.y / _bounds.size.y)
 	var offset := Vector2(PADDING, PADDING) + (inner - _bounds.size * scale_factor) * 0.5
 	return offset + (cell - _bounds.position) * scale_factor
 
 func _cell_scale() -> float:
-	var inner := size - Vector2(PADDING, PADDING) * 2.0 - Vector2(0.0, 22.0)
+	var inner := _map_area()
 	return minf(inner.x / _bounds.size.x, inner.y / _bounds.size.y)
 
 func _draw() -> void:
@@ -112,7 +124,9 @@ func _draw_room(room: FloorPlan.Room) -> void:
 	draw_rect(rect, color.lightened(0.25), false, 1.0)
 
 func _draw_markers() -> void:
-	var radius := maxf(3.0, _cell_scale() * 1.6)
+	# Верхняя граница: на развёрнутой карте клетка крупная, и маркер без предела
+	# накрывал бы комнату целиком.
+	var radius := clampf(_cell_scale() * 1.6, 3.0, 7.0)
 	# Вход и выход крупнее и с обводкой, иначе маркер отряда их перекрывает.
 	_marker(_to_local(Vector2(plan.entrance_cell)), radius * 1.4, COLOR_ENTRANCE)
 	_marker(_to_local(Vector2(plan.exit_cell)), radius * 1.4, COLOR_EXIT)
@@ -133,34 +147,46 @@ func _marker(point: Vector2, radius: float, color: Color) -> void:
 	draw_circle(point, radius + 1.5, Color(0.04, 0.04, 0.05, 0.9))
 	draw_circle(point, radius, color)
 
-## Легенда с образцами цвета: без них карта читается только на память.
+## Легенда. На свёрнутой карте — только подсказка про M, на развёрнутой — панель
+## в отдельной колонке: без неё цвета комнат читаются только на память.
 func _draw_legend() -> void:
 	var font := ThemeDB.fallback_font
-	var font_size := 12 if expanded else 10
-	var y := size.y - 12.0
 	if not expanded:
-		draw_string(font, Vector2(PADDING, y), "M — крупная карта",
-			HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, Color(0.7, 0.68, 0.64))
+		draw_string(font, Vector2(PADDING, size.y - 12.0), "M — крупная карта",
+			HORIZONTAL_ALIGNMENT_LEFT, -1.0, 10, Color(0.7, 0.68, 0.64))
 		return
+	var panel := Rect2(size.x - PADDING - LEGEND_WIDTH + 8.0, PADDING,
+		LEGEND_WIDTH - 8.0, size.y - PADDING * 2.0)
+	draw_rect(panel, Color(0.09, 0.09, 0.11, 0.92), true)
+	draw_rect(panel, Color(0.28, 0.25, 0.21, 0.9), false, 1.0)
+	var x := panel.position.x + 14.0
+	var y := panel.position.y + 26.0
+	draw_string(font, Vector2(x, y), "Обозначения", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 15,
+		Color(0.85, 0.68, 0.35))
+	y += 14.0
+	draw_line(Vector2(x, y), Vector2(panel.end.x - 14.0, y), Color(0.28, 0.25, 0.21, 0.9), 1.0)
+	y += 24.0
+	# true — кружок (точка на карте), false — квадрат (заливка комнаты).
 	var items: Array[Array] = [
-		[COLOR_ENTRANCE, "вход", true],
-		[COLOR_EXIT, "выход", true],
+		[COLOR_ENTRANCE, "вход на этаж", true],
+		[COLOR_EXIT, "спуск на этаж ниже", true],
 		[COLOR_PARTY, "отряд", true],
-		[COLOR_VISITED, "пройдено", false],
-		[COLOR_CLEARED, "зачищено", false],
-		[COLOR_DANGER, "бой", false],
-		[COLOR_UNKNOWN, "не открыто", false],
+		[COLOR_CHEST, "сундук", true],
+		[COLOR_PROP, "ресурсы", true],
+		[COLOR_VISITED, "комната пройдена", false],
+		[COLOR_CLEARED, "бой выигран", false],
+		[COLOR_DANGER, "бой не начат", false],
+		[COLOR_UNKNOWN, "не открыта", false],
 	]
-	var x := PADDING
 	for item: Array in items:
 		var color: Color = item[0]
-		var text: String = item[1]
 		if bool(item[2]):
-			draw_circle(Vector2(x + 5.0, y - 4.0), 5.0, color)
+			draw_circle(Vector2(x + 6.0, y - 5.0), 5.0, color)
 		else:
-			draw_rect(Rect2(x, y - 9.0, 10.0, 10.0), color, true)
-		x += 15.0
-		var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
-		draw_string(font, Vector2(x, y), text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size,
-			Color(0.82, 0.8, 0.76))
-		x += width + 14.0
+			draw_rect(Rect2(x, y - 11.0, 12.0, 12.0), color, true)
+			draw_rect(Rect2(x, y - 11.0, 12.0, 12.0), color.lightened(0.25), false, 1.0)
+		draw_string(font, Vector2(x + 20.0, y), String(item[1]), HORIZONTAL_ALIGNMENT_LEFT,
+			panel.size.x - 40.0, 13, Color(0.82, 0.8, 0.76))
+		y += 24.0
+	draw_string(font, Vector2(x, panel.end.y - 14.0), "M — свернуть карту",
+		HORIZONTAL_ALIGNMENT_LEFT, -1.0, 12, Color(0.7, 0.68, 0.64))

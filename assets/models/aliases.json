@@ -1,18 +1,31 @@
 {
-  "_comment": "Соответствие id актёра и модели. Путь указывается от assets/models/ без расширения.",
-  "hald": "kenney_characters/character-a",
-  "irma": "kenney_characters/character-b",
-  "vern": "kenney_characters/character-c",
-  "mara": "kenney_characters/character-d",
+  "_comment": "Соответствие id актёра и модели. Путь от assets/models/ без расширения. Ключ <id>_scale задаёт масштаб модели, <id>_yaw — доворот в градусах (по умолчанию 180: у моделей китов «перёд» смотрит в +Z, а у Godot — в -Z).",
 
-  "skeleton_warrior": "kenney_graveyard/character-skeleton",
-  "bone_archer": "kenney_graveyard/character-skeleton",
-  "bone_legionnaire": "kenney_graveyard/character-skeleton",
-  "ghoul": "kenney_graveyard/character-zombie",
-  "drowned_one": "kenney_graveyard/character-zombie",
-  "gravedigger": "kenney_graveyard/character-keeper",
-  "cold_wraith": "kenney_graveyard/character-ghost",
-  "lich_acolyte": "kenney_graveyard/character-vampire",
-  "witch_of_fens": "kenney_graveyard/character-vampire",
-  "enemy_default": "kenney_graveyard/character-skeleton"
+  "hald": "kaykit_heroes/Knight",
+  "irma": "kaykit_heroes/Rogue",
+  "vern": "kaykit_heroes/Rogue_Hooded",
+  "mara": "kaykit_heroes/Mage",
+
+  "skeleton_warrior": "kaykit_skeletons/Skeleton_Warrior",
+  "bone_legionnaire": "kaykit_skeletons/Skeleton_Warrior",
+  "bone_archer": "kaykit_skeletons/Skeleton_Rogue",
+  "bone_abbot": "kaykit_skeletons/Skeleton_Mage",
+  "lich_acolyte": "kaykit_skeletons/Skeleton_Mage",
+  "witch_of_fens": "kaykit_skeletons/Skeleton_Mage",
+  "cold_wraith": "kaykit_skeletons/Skeleton_Mage",
+  "gravedigger": "kaykit_skeletons/Skeleton_Minion",
+  "ghoul": "kaykit_skeletons/Skeleton_Minion",
+  "drowned_one": "kaykit_skeletons/Skeleton_Minion",
+  "enemy_default": "kaykit_skeletons/Skeleton_Minion",
+
+  "chest_common": "kaykit_dungeon/chest",
+  "chest_treasure": "kaykit_dungeon/chest_gold",
+
+  "_folder_scale": {"kaykit_heroes": 0.65, "kaykit_skeletons": 0.65, "kaykit_dungeon": 0.53},
+
+  "_comment_yaw": "У сундука «перёд» с замком смотрит в -Z, а камера в подземелье стоит в +Z — без доворота в 0 игрок видел бы только заднюю стенку.",
+  "_folder_yaw": {"kaykit_dungeon": 0},
+
+  "bone_legionnaire_scale": 0.75,
+  "bone_abbot_scale": 0.78
 }

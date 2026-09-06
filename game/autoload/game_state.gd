@@ -3,12 +3,16 @@ extends Node
 ## Хранение и маршрутизация — без игровых правил (08-architecture.md, раздел 3).
 
 const GAME_VERSION := "1.0"
+## Урон любой атаки в режиме разработчика (F1 в подземелье). Режим живёт только
+## в сессии: в сохранение не попадает и при запуске всегда выключен.
+const DEV_DAMAGE := 999
 
 var profile: ProfileState
 var run: RunState
 var item_factory: ItemFactory
 var skill_tree: SkillTree
 var blessing_pool: BlessingPool
+var dev_mode: bool = false
 
 func _ready() -> void:
 	_build_services()

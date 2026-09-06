@@ -6,7 +6,15 @@ enum Mode { LOADING, EXPLORE, COMBAT, DIALOG }
 
 const MOVE_SPEED := 4.5
 const SPRINT_MULT := 1.6
-const FOLLOW_GAP := 1.1
+## Строй отряда в локальных координатах лидера: «перёд» — это -Z, поэтому
+## спутники стоят по +Z. Ширина строя 2.6 м против коридора в 3 клетки (4.5 м) —
+## отряд идёт клином, а не гуськом.
+const FORMATION: Array[Vector3] = [
+	Vector3.ZERO,
+	Vector3(-1.3, 0.0, 0.9),
+	Vector3(1.3, 0.0, 0.9),
+	Vector3(0.0, 0.0, 1.9),
+]
 const INTERACT_RANGE := 2.2
 
 var service: RunService
@@ -26,7 +34,10 @@ var environment: WorldEnvironment
 var combat_controller: Node
 var hud: Control
 var minimap: Control
-var _trail: Array[Vector3] = []
+## Аниматоры отряда в режиме исследования: держат клип ходьбы и стойки.
+var _walk_animators: Array[ActorAnimator] = []
+## Круги под ногами: показывают, что герой — персонаж игрока.
+var _rings: Array[SelectionRing3D] = []
 var _torch_accumulator: float = 0.0
 var _pending_interaction: Dictionary = {}
 ## Разовые результаты действий над ящиками: индекс пропа -> уже сделано.
@@ -82,20 +93,25 @@ func _spawn_party() -> void:
 		var member: CharacterState = service.run.party[i]
 		var node := _make_actor_node(member.data.display_name if member.data else "Герой",
 			member.data.tint if member.data else Color.WHITE, 1.8, member.hero_id)
-		node.position = start + Vector3(0.0, 0.0, i * 0.6)
+		node.position = start + _formation_offset(i)
 		add_child(node)
 		party_nodes.append(node)
+		_walk_animators.append(ActorAnimator.attach(node))
+		ActorModel.set_casts_shadow(node, false)
+		var ring := SelectionRing3D.create()
+		node.add_child(ring)
+		_rings.append(ring)
 	leader = party_nodes[0]
+	# В исследовании «ходит» тот, кем управляешь, — лидер.
+	set_active_ring(service.run.party[0].hero_id)
 	torch_light = OmniLight3D.new()
 	torch_light.light_color = Color(1.0, 0.72, 0.42)
 	torch_light.light_energy = 2.4
 	torch_light.omni_range = Balance.data.light_dim_cells * cell_size
 	torch_light.shadow_enabled = true   # единственный источник теней в кадре
-	torch_light.position = Vector3(0.0, 1.4, 0.0)
+	torch_light.position = Vector3(0.4, 1.7, 0.5)   # факел над плечом, а не внутри груди
 	leader.add_child(torch_light)
-	_trail.clear()
-	for i: int in 64:
-		_trail.append(leader.global_position)
+	_update_followers(1.0)
 	_update_camera(0.0)
 
 ## Герои строятся отдельной моделью — силуэт должен отличаться от вражеского.
@@ -132,6 +148,7 @@ func _process_explore(delta: float) -> void:
 		var basis_dir := Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, camera_yaw)
 		_try_move(leader, basis_dir.normalized() * speed * delta)
 		leader.rotation.y = atan2(-basis_dir.x, -basis_dir.z)
+	_set_walking(input.length() > 0.01)
 	_update_followers(delta)
 	_mark_visited_room()
 	_check_room_trigger()
@@ -146,21 +163,34 @@ func _try_move(node: Node3D, motion: Vector3) -> void:
 	var vertical := Vector3(node.global_position.x, node.global_position.y, target.z)
 	if _walkable_at(vertical):
 		node.global_position.z = target.z
-	_trail.push_front(node.global_position)
-	if _trail.size() > 128:
-		_trail.resize(128)
 
 func _walkable_at(pos: Vector3) -> bool:
 	return plan.is_floor(FloorBuilder.world_to_cell(pos, cell_size))
 
 func _update_followers(delta: float) -> void:
+	var weight := clampf(delta * 5.0, 0.0, 1.0)
 	for i: int in range(1, party_nodes.size()):
 		var member: CharacterState = service.run.party[i]
 		var node := party_nodes[i]
 		node.visible = not member.is_dead_this_run
-		var index := mini(_trail.size() - 1, int(i * FOLLOW_GAP * 8))
-		var target: Vector3 = _trail[index]
-		node.global_position = node.global_position.lerp(target, clampf(delta * 4.0, 0.0, 1.0))
+		node.global_position = node.global_position.lerp(_formation_slot(i), weight)
+		# Строй смотрит туда же, куда лидер: спутник, доворачивающийся по своему
+		# шагу, на месте разворачивался как попало.
+		node.rotation.y = lerp_angle(node.rotation.y, leader.rotation.y, weight)
+
+## Место спутника в строю в мировых координатах.
+func _formation_slot(index: int) -> Vector3:
+	var offset := _formation_offset(index).rotated(Vector3.UP, leader.rotation.y)
+	# На повороте и в узком месте место в строю может уткнуться в стену — тогда
+	# спутник подтягивается ближе к лидеру, вплоть до его собственной клетки.
+	for factor: float in [1.0, 0.66, 0.33]:
+		var candidate := leader.global_position + offset * factor
+		if _walkable_at(candidate):
+			return candidate
+	return leader.global_position
+
+func _formation_offset(index: int) -> Vector3:
+	return FORMATION[index] if index < FORMATION.size() else FORMATION[FORMATION.size() - 1]
 
 func _update_camera(delta: float) -> void:
 	if camera == null or leader == null:
@@ -187,6 +217,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		combat_controller.end_turn()
 	if event.is_action_pressed("interact") and mode == Mode.EXPLORE:
 		_interact()
+	if event.is_action_pressed("toggle_dev_mode"):
+		_toggle_dev_mode()
 	var key_event := event as InputEventKey
 	if key_event != null and key_event.pressed and key_event.keycode == KEY_Q and not service.run.torch_lit:
 		if service.light_new_torch():
@@ -591,3 +623,32 @@ func _update_camera_combat(delta: float) -> void:
 	var desired: Vector3 = focus + Vector3(0.0, 11.0, 8.0).rotated(Vector3.UP, camera_yaw)
 	camera.global_position = camera.global_position.lerp(desired, clampf(delta * 4.0, 0.05, 1.0))
 	camera.look_at(focus, Vector3.UP)
+
+## Ходьба всего отряда: спутники идут следом, поэтому клип у них общий с лидером.
+func _set_walking(moving: bool) -> void:
+	for animator: ActorAnimator in _walk_animators:
+		if is_instance_valid(animator):
+			animator.set_moving(moving)
+
+## Зелёный круг под тем, чей сейчас ход: в исследовании это лидер, в бою —
+## существо, которое ходит. Остальные герои остаются с синим кругом.
+func set_active_ring(actor_id: StringName) -> void:
+	for i: int in _rings.size():
+		if i >= service.run.party.size():
+			break
+		var member: CharacterState = service.run.party[i]
+		_rings[i].set_active(member.hero_id == actor_id)
+
+func ring_of_hero(index: int) -> SelectionRing3D:
+	return _rings[index] if index >= 0 and index < _rings.size() else null
+
+## Режим разработчика (F1): любая атака наносит GameState.DEV_DAMAGE. Флаг живёт
+## в сессии, поэтому переживает спуск на новый этаж, но не попадает в сохранение.
+## Идущий бой подхватывает переключение сразу — перезаходить не нужно.
+func _toggle_dev_mode() -> void:
+	GameState.dev_mode = not GameState.dev_mode
+	if combat_controller != null:
+		combat_controller.apply_dev_mode()
+	hud.refresh()
+	EventBus.notify("Режим разработчика %s." % ("включён" if GameState.dev_mode else "выключен"))
+	Log.info("dev_mode=%s" % GameState.dev_mode)

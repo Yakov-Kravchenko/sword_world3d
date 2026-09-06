@@ -70,6 +70,7 @@ func _check_run_cycle() -> void:
 	var plan := service.generate_floor()
 	_check(plan.rooms.size() >= 6, "этаж сгенерирован (%d комнат)" % plan.rooms.size())
 	_check(plan.entrance_cell != plan.exit_cell, "вход и выход разнесены")
+	_check_floor_shape(plan)
 	_check(not plan.encounters.is_empty(), "встречи расставлены (%d)" % plan.encounters.size())
 	var encounter := plan.encounters[0]
 	var room := plan.rooms[int(encounter["room"])]
@@ -718,3 +719,59 @@ func _find_player(node: Node) -> AnimationPlayer:
 		if nested != null:
 			return nested
 	return null
+
+## Форма этажа: выход в дальнем конце и коридоры, по которым отряд проходит не
+## гуськом. Обе проверки нужны — иначе регрессия видна только глазами.
+func _check_floor_shape(plan: FloorPlan) -> void:
+	var entrance_room := plan.room_at(plan.entrance_cell)
+	var exit_room := plan.room_at(plan.exit_cell)
+	if entrance_room == null or exit_room == null:
+		_check(false, "вход и выход лежат в комнатах")
+		return
+	var distances := _room_distances(plan, entrance_room.index)
+	var exit_distance: int = int(distances.get(exit_room.index, -1))
+	var farthest := -1
+	for i: int in plan.rooms.size():
+		farthest = maxi(farthest, int(distances.get(i, -1)))
+	_check(exit_distance == farthest,
+		"выход в самой дальней комнате (%d из %d переходов)" % [exit_distance, farthest])
+	_check(_narrowest_corridor(plan) >= 3,
+		"коридоры шириной от 3 клеток (узкое место: %d)" % _narrowest_corridor(plan))
+
+func _room_distances(plan: FloorPlan, from_index: int) -> Dictionary:
+	var dist := {from_index: 0}
+	var queue: Array[int] = [from_index]
+	while not queue.is_empty():
+		var cur: int = queue.pop_front()
+		for n: int in plan.rooms[cur].connections:
+			if dist.has(n):
+				continue
+			dist[n] = int(dist[cur]) + 1
+			queue.append(n)
+	return dist
+
+## Ширина самого узкого места коридоров. Меряем по каждой клетке вне комнат:
+## сколько таких же клеток подряд идёт по горизонтали и по вертикали. Коридор
+## шириной 3 даёт тройку хотя бы по одной оси — по той, что поперёк движения.
+## Одной горизонтальной меры мало: вертикальный коридор у стены комнаты даёт в
+## строке одну-две клетки, хотя сам по себе широкий.
+func _narrowest_corridor(plan: FloorPlan) -> int:
+	var narrowest := 99
+	for y: int in range(1, plan.height - 1):
+		for x: int in range(1, plan.width - 1):
+			var cell := Vector2i(x, y)
+			if not (plan.is_floor(cell) and plan.room_at(cell) == null):
+				continue
+			var span := maxi(_corridor_run(plan, cell, Vector2i.RIGHT),
+				_corridor_run(plan, cell, Vector2i.DOWN))
+			narrowest = mini(narrowest, span)
+	return narrowest
+
+func _corridor_run(plan: FloorPlan, cell: Vector2i, axis: Vector2i) -> int:
+	var run := 1
+	for sign_value: int in [1, -1]:
+		var cur := cell + axis * sign_value
+		while plan.is_floor(cur) and plan.room_at(cur) == null:
+			run += 1
+			cur += axis * sign_value
+	return run

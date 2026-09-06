@@ -51,6 +51,7 @@ func _build_state(encounter: Dictionary) -> void:
 	state.spell_db = Database.spell_map()
 	service.run.combat_index += 1
 	state.combat_index = service.run.combat_index
+	state.dev_damage = GameState.DEV_DAMAGE if GameState.dev_mode else 0
 	state.rng = service.run.stream(&"combat", service.run.combat_index)
 	var area := room.rect.grow(1)
 	state.grid = plan.build_combat_grid(area)
@@ -114,6 +115,10 @@ func _build_visuals() -> void:
 			enemy_nodes[actor.id] = node
 			_attach_health_bar(actor, node)
 			animators[actor.id] = ActorAnimator.attach(node)
+			var ring := SelectionRing3D.create(SelectionRing3D.ENEMY)
+			# Крупные существа занимают больше клеток — круг растёт вместе с ними.
+			ring.scale = Vector3.ONE * (1.0 + 0.5 * float(maxi(0, actor.size_cells - 1)))
+			node.add_child(ring)
 	var i := 0
 	for actor: CombatActor in state.team_actors(CombatActor.TEAM_PARTY):
 		if i < run_scene.party_nodes.size():
@@ -140,6 +145,7 @@ func _on_turn_started(actor_id: StringName) -> void:
 	if actor == null:
 		return
 	EventBus.turn_started.emit(actor_id)
+	_highlight_turn(actor_id)
 	ui.set_active_actor(actor)
 	_refresh_reachable(actor)
 	if actor.team == CombatActor.TEAM_ENEMY:
@@ -281,11 +287,16 @@ func _teardown() -> void:
 		if is_instance_valid(bar):
 			(bar as Node).queue_free()
 	health_bars.clear()
-	# Аниматоры героев живут на постоянных моделях — снимаем и возвращаем позу.
+	# Модели отряда постоянные: возвращаем позу и зелёный круг лидеру. Аниматоры
+	# героев тоже общие с режимом исследования — трогать их нельзя, иначе после
+	# первого боя отряд перестаёт шагать.
 	for id: Variant in hero_nodes.keys():
 		var node: Node3D = hero_nodes[id]
 		if is_instance_valid(node):
 			node.rotation = Vector3.ZERO
+		animators.erase(id)
+	if not service.run.party.is_empty():
+		run_scene.set_active_ring(service.run.party[0].hero_id)
 	for animator: Variant in animators.values():
 		if is_instance_valid(animator):
 			(animator as Node).queue_free()
@@ -699,3 +710,15 @@ static func _spell_color(spell: SpellData) -> Color:
 		&"necrotic": return Color(0.6, 0.35, 0.75)
 		&"radiant": return Color(1.0, 0.94, 0.7)
 	return Color(0.7, 0.75, 1.0) if spell.heal_dice.is_empty() else Color(0.5, 1.0, 0.6)
+
+## Зелёный круг загорается только под героем, который ходит. Круг врага всегда
+## красный: зелёный читается как «сейчас мой ход», и на вражеском ходу он сбивал
+## с толку. Чей ход у противника, видно по очереди хода наверху экрана.
+func _highlight_turn(actor_id: StringName) -> void:
+	run_scene.set_active_ring(actor_id)
+
+## Переключение режима разработчика на ходу: бой берёт урон из состояния при
+## каждом ударе, поэтому достаточно обновить число.
+func apply_dev_mode() -> void:
+	if state != null:
+		state.dev_damage = GameState.DEV_DAMAGE if GameState.dev_mode else 0

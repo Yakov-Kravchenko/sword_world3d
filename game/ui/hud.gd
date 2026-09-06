@@ -6,6 +6,7 @@ var _party_box: VBoxContainer
 var _torch_label: Label
 var _floor_label: Label
 var _resource_label: Label
+var _dev_label: Label
 var _interaction_label: Label
 var _notice_log: RichTextLabel
 var _modal: Control
@@ -35,9 +36,12 @@ func _build() -> void:
 	_floor_label = UIKit.label("", 16, UIKit.ACCENT)
 	_torch_label = UIKit.label("", 13)
 	_resource_label = UIKit.label("", 13)
+	_dev_label = UIKit.label("", 13, UIKit.DANGER)
+	_dev_label.visible = false
 	top_box.add_child(_floor_label)
 	top_box.add_child(_torch_label)
 	top_box.add_child(_resource_label)
+	top_box.add_child(_dev_label)
 
 	var party_panel := UIKit.panel(UIKit.BG_SOFT)
 	party_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
@@ -86,6 +90,10 @@ func refresh() -> void:
 	_resource_label.text = "Добыча забега: %d золота" % run.run_gold
 	if not mats.is_empty():
 		_resource_label.text += " · " + ", ".join(mats)
+	# Про 999 у врагов пишем прямо: иначе первый же скелет сносит героя, и это
+	# выглядит как баг, а не как включённый режим.
+	_dev_label.visible = GameState.dev_mode
+	_dev_label.text = "F1 — режим разработчика: любая атака, и своя и вражеская, наносит %d" % GameState.DEV_DAMAGE
 	_rebuild_party()
 
 func _update_torch() -> void:

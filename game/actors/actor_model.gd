@@ -76,7 +76,7 @@ static func _prism(size: Vector3) -> PrismMesh:
 
 static func build_hero(display_name: String, tint: Color, model_id: StringName = &"") -> Node3D:
 	# Готовая модель героя, если она положена в assets/models/actors.
-	var external := ModelLibrary.instantiate("actors", String(model_id))
+	var external := ModelLibrary.build("actors", String(model_id))
 	if external != null:
 		external.name = display_name
 		external.set_meta("model_kind", "hero")
@@ -124,9 +124,9 @@ static func build_hero(display_name: String, tint: Color, model_id: StringName =
 
 static func build_enemy(data: EnemyData, elite: bool, tint: Color) -> Node3D:
 	var model_id := String(data.id) if data != null else "enemy_default"
-	var external := ModelLibrary.instantiate("actors", model_id)
+	var external := ModelLibrary.build("actors", model_id)
 	if external == null:
-		external = ModelLibrary.instantiate("actors", "enemy_default")
+		external = ModelLibrary.build("actors", "enemy_default")
 	if external != null:
 		external.name = data.display_name if data != null else "Враг"
 		external.set_meta("model_kind", "enemy")
@@ -212,3 +212,19 @@ static func _add_crown(root: Node3D, height: float, scale_factor: float, tint: C
 			Vector3(sin(angle) * 0.22 * scale_factor, height,
 				cos(angle) * 0.22 * scale_factor), tint.lightened(0.45), "", true)
 		spike.rotation_degrees = Vector3(cos(angle) * 18.0, 0.0, -sin(angle) * 18.0)
+
+## Факел висит вплотную к отряду, и любой из героев, попав между огнём и сценой,
+## закрывает её собственной тенью — подземелье уходит в черноту. Поэтому отряд
+## из отбрасывающих тень исключён: стены, столбы и враги тени по-прежнему дают.
+static func set_casts_shadow(root: Node3D, casts: bool) -> void:
+	var mode := GeometryInstance3D.SHADOW_CASTING_SETTING_ON if casts \
+		else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for node: Node in _walk(root):
+		if node is GeometryInstance3D:
+			(node as GeometryInstance3D).cast_shadow = mode
+
+static func _walk(node: Node) -> Array[Node]:
+	var found: Array[Node] = [node]
+	for child: Node in node.get_children():
+		found.append_array(_walk(child))
+	return found
