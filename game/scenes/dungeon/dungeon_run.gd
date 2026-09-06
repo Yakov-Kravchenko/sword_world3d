@@ -29,6 +29,8 @@ var minimap: Control
 var _trail: Array[Vector3] = []
 ## Аниматоры отряда в режиме исследования: держат клип ходьбы и стойки.
 var _walk_animators: Array[ActorAnimator] = []
+## Круги под ногами: показывают, что герой — персонаж игрока.
+var _rings: Array[SelectionRing3D] = []
 var _torch_accumulator: float = 0.0
 var _pending_interaction: Dictionary = {}
 ## Разовые результаты действий над ящиками: индекс пропа -> уже сделано.
@@ -89,7 +91,12 @@ func _spawn_party() -> void:
 		party_nodes.append(node)
 		_walk_animators.append(ActorAnimator.attach(node))
 		ActorModel.set_casts_shadow(node, false)
+		var ring := SelectionRing3D.create()
+		node.add_child(ring)
+		_rings.append(ring)
 	leader = party_nodes[0]
+	# В исследовании «ходит» тот, кем управляешь, — лидер.
+	set_active_ring(service.run.party[0].hero_id)
 	torch_light = OmniLight3D.new()
 	torch_light.light_color = Color(1.0, 0.72, 0.42)
 	torch_light.light_energy = 2.4
@@ -613,3 +620,15 @@ func _set_walking(moving: bool) -> void:
 	for animator: ActorAnimator in _walk_animators:
 		if is_instance_valid(animator):
 			animator.set_moving(moving)
+
+## Зелёный круг под тем, чей сейчас ход: в исследовании это лидер, в бою —
+## существо, которое ходит. Остальные герои остаются с синим кругом.
+func set_active_ring(actor_id: StringName) -> void:
+	for i: int in _rings.size():
+		if i >= service.run.party.size():
+			break
+		var member: CharacterState = service.run.party[i]
+		_rings[i].set_active(member.hero_id == actor_id)
+
+func ring_of_hero(index: int) -> SelectionRing3D:
+	return _rings[index] if index >= 0 and index < _rings.size() else null

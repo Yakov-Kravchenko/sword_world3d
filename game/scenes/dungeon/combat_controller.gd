@@ -15,6 +15,7 @@ var cell_size: float = 1.5
 var ui: Control
 var markers: Node3D
 var enemy_nodes: Dictionary = {}      # actor_id -> Node3D
+var enemy_rings: Dictionary = {}      # actor_id -> SelectionRing3D
 var health_bars: Dictionary = {}      # actor_id -> HealthBar3D
 var animators: Dictionary = {}        # actor_id -> ActorAnimator
 var _fill_light: OmniLight3D
@@ -114,6 +115,12 @@ func _build_visuals() -> void:
 			enemy_nodes[actor.id] = node
 			_attach_health_bar(actor, node)
 			animators[actor.id] = ActorAnimator.attach(node)
+			# Круг под врагом виден только в его ход: постоянная подсветка
+			# врагов сбивала бы с толку — синий круг значит «мой».
+			var ring := SelectionRing3D.create()
+			ring.visible = false
+			node.add_child(ring)
+			enemy_rings[actor.id] = ring
 	var i := 0
 	for actor: CombatActor in state.team_actors(CombatActor.TEAM_PARTY):
 		if i < run_scene.party_nodes.size():
@@ -140,6 +147,7 @@ func _on_turn_started(actor_id: StringName) -> void:
 	if actor == null:
 		return
 	EventBus.turn_started.emit(actor_id)
+	_highlight_turn(actor_id)
 	ui.set_active_actor(actor)
 	_refresh_reachable(actor)
 	if actor.team == CombatActor.TEAM_ENEMY:
@@ -229,6 +237,7 @@ func _on_actor_killed(actor_id: StringName) -> void:
 			node.queue_free()
 			enemy_nodes.erase(actor_id)
 		health_bars.erase(actor_id)
+		enemy_rings.erase(actor_id)
 	else:
 		var member := service.run.member(actor.source_id)
 		if member != null:
@@ -281,15 +290,21 @@ func _teardown() -> void:
 		if is_instance_valid(bar):
 			(bar as Node).queue_free()
 	health_bars.clear()
-	# Аниматоры героев живут на постоянных моделях — снимаем и возвращаем позу.
+	# Модели отряда постоянные: возвращаем позу и зелёный круг лидеру. Аниматоры
+	# героев тоже общие с режимом исследования — трогать их нельзя, иначе после
+	# первого боя отряд перестаёт шагать.
 	for id: Variant in hero_nodes.keys():
 		var node: Node3D = hero_nodes[id]
 		if is_instance_valid(node):
 			node.rotation = Vector3.ZERO
+		animators.erase(id)
+	if not service.run.party.is_empty():
+		run_scene.set_active_ring(service.run.party[0].hero_id)
 	for animator: Variant in animators.values():
 		if is_instance_valid(animator):
 			(animator as Node).queue_free()
 	animators.clear()
+	enemy_rings.clear()
 	for node: Node3D in enemy_nodes.values():
 		node.queue_free()
 	enemy_nodes.clear()
@@ -699,3 +714,18 @@ static func _spell_color(spell: SpellData) -> Color:
 		&"necrotic": return Color(0.6, 0.35, 0.75)
 		&"radiant": return Color(1.0, 0.94, 0.7)
 	return Color(0.7, 0.75, 1.0) if spell.heal_dice.is_empty() else Color(0.5, 1.0, 0.6)
+
+## Зелёный круг под тем, чей сейчас ход. У героев круг постоянный и просто
+## меняет цвет, у врагов — появляется на их ход и снова прячется.
+func _highlight_turn(actor_id: StringName) -> void:
+	run_scene.set_active_ring(actor_id)
+	for id: Variant in enemy_rings.keys():
+		# Круг убитого врага уже освобождён вместе с его моделью, поэтому сначала
+		# проверяем ссылку и только потом присваиваем её типизированной переменной.
+		var value: Variant = enemy_rings[id]
+		if not is_instance_valid(value):
+			enemy_rings.erase(id)
+			continue
+		var ring := value as SelectionRing3D
+		ring.visible = id == actor_id
+		ring.set_active(id == actor_id)
