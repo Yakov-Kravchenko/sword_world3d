@@ -60,35 +60,31 @@ func wall_run(origin: Vector3, side: int, count: int, models: Array[String]) -> 
 		# Панель модуля прижата к +X, поэтому четверть оборота равна номеру стороны.
 		piece(model, origin + step * float(i), side)
 
-## Коробка дома: пол, стены по периметру с дверью и окнами, двускатная крыша.
-## Возвращает точку взаимодействия перед дверью.
+## Дом собирает VillageBuildings, а не модули кита: модульные стены дают коробку
+## с плоской крышей, а северную деревню держат крутой скат с большими свесами,
+## фахверк и каменный цоколь. Сигнатура прежняя, вызовы построек не меняются.
+## door_index больше не нужен — дверь всегда по центру фасада.
 func house(center: Vector3, modules: Vector2i, storeys: int, door_index: int) -> Vector3:
-	var half := Vector3(float(modules.x - 1) * 0.5, 0.0, float(modules.y - 1) * 0.5)
-	var base := center - half
-	for x: int in modules.x:
-		for z: int in modules.y:
-			piece("planks", base + Vector3(x, 0.0, z))
-	for level: int in storeys:
-		var y := float(level)
-		var front: Array[String] = []
-		for x: int in modules.x:
-			if level == 0 and x == door_index:
-				front.append("wall-door")
-			elif level == 0:
-				front.append("wall-window-shutters")
-			else:
-				front.append("wall-window-glass" if x % 2 == 1 else "wall")
-		var plain: Array[String] = ["wall"]
-		var windows: Array[String] = ["wall", "wall-window-small"]
-		# Фасад смотрит на +Z (во двор), остальные стороны глухие с окнами.
-		wall_run(base + Vector3(0.0, y, float(modules.y - 1)), 3, modules.x, front)
-		wall_run(base + Vector3(0.0, y, 0.0), 1, modules.x, windows)
-		wall_run(base + Vector3(0.0, y, 0.0), 2, modules.y, windows)
-		wall_run(base + Vector3(float(modules.x - 1), y, 0.0), 0, modules.y, plain)
-	_roof(base, modules, storeys)
-	block(center, Vector2(float(modules.x), float(modules.y)))
-	return (center + Vector3(float(door_index) - half.x, 0.0, half.z + 1.2)) * KIT_SCALE \
-		+ Vector3(0.0, 0.9, 0.0)
+	var world := center * KIT_SCALE
+	var size := Vector2(float(modules.x), float(modules.y)) * KIT_SCALE
+	# Фасадом к центру деревни: улица должна читаться домами, а не задворками.
+	var yaw := atan2(-world.x, -world.z)
+	# Дом повёрнут, поэтому препятствие описываем квадратом по большей стороне:
+	# прямоугольник в плане после поворота уже не совпал бы с габаритом.
+	var span := float(maxi(modules.x, modules.y))
+	block(center, Vector2(span, span))
+	return builder().house(world, size, storeys, yaw)
+
+
+## Генератор общий на всю деревню: материалы домов создаются один раз, иначе
+## каждая постройка тащила бы свой комплект текстур.
+static var _shared_builder: VillageBuildings
+
+func builder() -> VillageBuildings:
+	if _shared_builder == null or _shared_builder.root != root:
+		_shared_builder = VillageBuildings.new(root)
+	return _shared_builder
+
 
 ## Крыша своя, а не из кита: собрать скаты из модулей вслепую не выходит,
 ## а призма даёт предсказуемый конёк и садится на стены точно по габаритам.
@@ -125,3 +121,13 @@ func stone_run(origin: Vector3, side: int, count: int, gap_index: int = -1) -> v
 		if i == gap_index:
 			continue
 		stone_wall(origin + step * float(i), side)
+
+
+## Генератор утвари, общий на деревню. Ленивое создание: препятствия и ландшафт
+## к моменту первой постройки уже готовы.
+static var _shared_gear: VillageGear
+
+func gear() -> VillageGear:
+	if _shared_gear == null or _shared_gear.root != root:
+		_shared_gear = VillageGear.new(root, builder(), VillageLook.current, blockers)
+	return _shared_gear

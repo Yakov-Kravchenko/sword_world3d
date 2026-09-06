@@ -118,14 +118,14 @@ func build_forge(center: Vector3) -> Vector3:
 	_shelter(center, Vector2(8.0, 6.0), 3.2, 0.35, WOOD_DARK, WOOD)
 	# Горн у дальней стены и труба над ним.
 	var hearth := center + Vector3(0.0, 0.0, -2.2)
-	box(Vector3(2.6, 1.3, 1.8), hearth + Vector3(0.0, 0.65, 0.0), STONE, true)
+	kit.gear().forge_hearth(Vector2(hearth.x, hearth.z), atan2(-center.x, -center.z))
 	glow(Vector3(1.8, 0.2, 1.1), hearth + Vector3(0.0, 1.35, 0.0), Color(1.0, 0.45, 0.12), 3.4)
 	box(Vector3(1.2, 3.4, 1.2), hearth + Vector3(0.0, 2.9, 0.0), STONE_DARK)
 	lamp(hearth + Vector3(0.0, 1.9, 0.6), Color(1.0, 0.55, 0.2), 3.0, 11.0)
 	# Наковальня — точка взаимодействия.
 	var anvil := center + Vector3(0.0, 0.0, 0.6)
-	box(Vector3(0.7, 0.6, 0.7), anvil + Vector3(0.0, 0.4, 0.0), STONE_DARK, true)
-	box(Vector3(1.5, 0.35, 0.6), anvil + Vector3(0.0, 0.87, 0.0), METAL)
+	kit.gear().anvil(Vector2(anvil.x, anvil.z), atan2(-center.x, -center.z))
+	kit.gear().weapon_rack(Vector2(center.x + 2.6, center.z + 1.2), atan2(-center.z, center.x))
 	box(Vector3(1.9, 0.6, 1.1), center + Vector3(2.6, 0.4, 1.4), WOOD_DARK, true)
 	cylinder(0.45, 0.9, center + Vector3(-2.8, 0.45, 1.6), WOOD, true)
 	# Стойка с заготовками.
@@ -171,10 +171,12 @@ func build_shop(center: Vector3) -> Vector3:
 	if kit != null:
 		var spot := kit.house(center / VillageKit.KIT_SCALE, Vector2i(3, 2), 1, 1)
 		var unit := VillageKit.KIT_SCALE
-		kit.piece("stall-red", (spot + Vector3(-2.2, -0.9, 1.6)) / unit)
-		kit.piece("cart", (spot + Vector3(2.6, -0.9, 1.2)) / unit, 1)
-		kit.piece("banner-red", (spot + Vector3(-3.4, -0.9, -0.4)) / unit)
-		kit.piece("lantern", (spot + Vector3(1.8, -0.9, 1.8)) / unit)
+		# Витрина лавки своей геометрией: полотняный навес и телега из кита были
+		# в другом масштабе и другой палитре.
+		kit.gear().stall(Vector2(spot.x - 2.2, spot.z + 1.8), atan2(-spot.x, -spot.z), true)
+		kit.gear().cart(Vector2(spot.x + 2.8, spot.z + 1.4), atan2(-spot.z, spot.x))
+		kit.gear().crate(Vector2(spot.x - 3.6, spot.z - 0.4), 0.4)
+		kit.gear().lamp_post(Vector2(spot.x + 1.9, spot.z + 2.2))
 		lamp(spot + Vector3(1.8, 1.6, 1.8), Color(1.0, 0.85, 0.6), 2.4, 12.0)
 		return spot
 	box(Vector3(8.0, 0.2, 6.0), center + Vector3(0.0, 0.1, 0.0), STONE_DARK)
@@ -374,44 +376,31 @@ func external(model_name: String, center: Vector3, anchor_offset: Vector3) -> Ve
 	return center + anchor_offset
 
 ## Манекены и стойка перед залом — кит их не содержит, собираем сами.
+## Тренировочный двор: манекены и стойка с оружием собирает VillageGear. Шары на
+## палках и бруски металла торчком читались как детская площадка.
 func _training_yard(spot: Vector3) -> void:
+	var gear := kit.gear() if kit != null else null
+	if gear == null:
+		return
 	for i: int in 3:
-		var post := spot + Vector3(-3.0 + float(i) * 3.0, -0.9, 2.6)
-		box(Vector3(0.32, 2.0, 0.32), post + Vector3(0.0, 1.0, 0.0), WOOD, true)
-		box(Vector3(1.5, 0.28, 0.28), post + Vector3(0.0, 1.55, 0.0), WOOD_DARK)
-		sphere(0.26, post + Vector3(0.0, 2.15, 0.0), CLOTH)
-	var rack := spot + Vector3(4.6, -0.9, 1.4)
-	box(Vector3(0.2, 1.9, 0.2), rack + Vector3(0.0, 0.95, -1.2), WOOD, true)
-	box(Vector3(0.2, 1.9, 0.2), rack + Vector3(0.0, 0.95, 1.2), WOOD, true)
-	box(Vector3(0.15, 0.15, 2.6), rack + Vector3(0.0, 1.8, 0.0), WOOD)
-	for i: int in 4:
-		box(Vector3(0.14, 1.3, 0.14), rack + Vector3(0.0, 1.25, -0.9 + float(i) * 0.6), METAL)
+		gear.dummy(Vector2(spot.x - 3.0 + float(i) * 3.0, spot.z + 2.6),
+			atan2(-spot.x, -spot.z))
+	gear.weapon_rack(Vector2(spot.x + 4.6, spot.z + 1.4), atan2(-spot.z, spot.x))
 
-## Сад на ките: плетень из модулей, грядки, деревья и кусты из Nature Kit.
+## Сад: грядки с всходами и пугалом, плетень по периметру, пара елей и валун.
+## Прежде здесь стояли модули забора и модели из Nature Kit — оранжевые доски и
+## гранёные шары рядом с фотосканной землёй выглядели чужеродно.
 func _kit_garden(center: Vector3) -> Vector3:
-	var unit := VillageKit.KIT_SCALE
-	box(Vector3(14.0, 0.15, 12.0), center + Vector3(0.0, 0.07, 0.0), Color(0.26, 0.23, 0.17))
-	# Забор по периметру с проходом со стороны двора.
-	for i: int in 5:
-		var x := -2.0 + float(i)
-		if absf(x + 0.0) < 0.6:
-			continue
-		kit.piece("fence", (center / unit) + Vector3(x, 0.0, 2.2), 3)
-		kit.piece("fence", (center / unit) + Vector3(x, 0.0, -2.2), 1)
-	for i: int in 5:
-		var z := -2.2 + float(i) * 1.1
-		kit.piece("fence", (center / unit) + Vector3(-2.4, 0.0, z), 2)
-		kit.piece("fence", (center / unit) + Vector3(2.4, 0.0, z), 0)
-	for row: int in 4:
-		var bed := center + Vector3(0.0, 0.0, -3.6 + float(row) * 2.2)
-		box(Vector3(10.0, 0.4, 1.2), bed + Vector3(0.0, 0.2, 0.0), Color(0.3, 0.21, 0.14))
-		for i: int in 9:
-			kit.nature("plant_bushDetailed", (bed + Vector3(-4.4 + float(i) * 1.1, 0.4, 0.0)) / unit, 0.5)
-	kit.nature("tree_oak", (center + Vector3(-5.6, 0.0, 4.4)) / unit, 0.6)
-	kit.nature("tree_default", (center + Vector3(5.4, 0.0, 4.2)) / unit, 0.55)
-	kit.nature("rock_largeA", (center + Vector3(-5.2, 0.0, -3.8)) / unit, 0.5)
-	kit.nature("stump_round", (center + Vector3(4.8, 0.0, -4.2)) / unit, 0.5)
-	cylinder(0.6, 1.2, center + Vector3(-4.8, 0.6, 3.6), WOOD_DARK, true)
+	var here := Vector2(center.x, center.z)
+	var gear := kit.gear()
+	var yaw := atan2(-center.x, -center.z)
+	gear.field(here, Vector2(9.5, 7.5), yaw)
+	gear.conifer(here + Vector2(-6.4, 5.2), 8.5, 4242)
+	gear.conifer(here + Vector2(6.0, 5.6), 7.0, 4243)
+	gear.boulder(here + Vector2(-5.8, -4.4), 1.4, 4244)
+	gear.crate(here + Vector2(5.2, -4.6), yaw, 0.65)
+	gear.barrel(here + Vector2(6.1, -4.2))
+	block_rect(center, Vector2(10.0, 8.0))
 	return center + Vector3(0.0, 0.9, 5.6)
 
 ## Прямоугольное препятствие в метрах — для оград и площадок.
@@ -423,53 +412,37 @@ func block_rect(center: Vector3, size: Vector2) -> void:
 ## Спуск в Разлом на ките замка: арка, пилоны, каменные ступени, флаги,
 ## жаровни из кладбищенского кита.
 func _kit_descend(center: Vector3) -> Vector3:
-	var unit := VillageKit.KIT_SCALE
-	var cell := center / unit
-	box(Vector3(12.0, 0.2, 10.0), center + Vector3(0.0, 0.1, 0.0), STONE_DARK)
-	kit.piece("tower-square-arch", cell + Vector3(0.0, 0.0, -0.4), 0, VillageKit.CASTLE)
+	var here := Vector2(center.x, center.z)
+	box(Vector3(13.0, 0.25, 11.0), center + Vector3(0.0, 0.12, 0.0), STONE_DARK)
+	# Врата собирает VillageGear: замковая арка из кита была ярко-оранжевой
+	# коробкой с зубцами и выбивалась из каменной деревни сильнее всего.
+	kit.gear().rift_gate(here, atan2(-center.x, -center.z))
 	for side: float in [-1.0, 1.0]:
-		kit.piece("wall-pillar", cell + Vector3(side, 0.0, -0.4), 0, VillageKit.CASTLE)
-		kit.piece("flag", cell + Vector3(side, 1.0, -0.2), 0, VillageKit.CASTLE)
-		var brazier := center + Vector3(side * 3.4, 0.0, 1.6)
-		kit.piece("fire-basket", brazier / unit, 0, VillageKit.GRAVE)
-		glow(Vector3(0.6, 0.2, 0.6), brazier + Vector3(0.0, 0.9, 0.0), Color(1.0, 0.5, 0.15), 3.0)
-		lamp(brazier + Vector3(0.0, 1.6, 0.0), Color(1.0, 0.55, 0.2), 2.8, 11.0)
-		block_rect(brazier, Vector2(1.0, 1.0))
+		var brazier := Vector2(center.x + side * 4.6, center.z + 2.4)
+		kit.gear().brazier(brazier)
 	# Ступени вниз и темнота под ними.
 	for i: int in 5:
-		kit.piece("stairs-stone", (center + Vector3(0.0, -0.35 * float(i), -3.0 - 1.4 * float(i))) / unit,
-			0, VillageKit.CASTLE)
+		box(Vector3(4.4, 0.3, 1.3),
+			center + Vector3(0.0, -0.35 * float(i), -3.2 - 1.3 * float(i)), STONE_DARK)
 	box(Vector3(4.0, 0.1, 3.0), center + Vector3(0.0, -2.0, -9.0), Color(0.03, 0.03, 0.04))
 	block_rect(center + Vector3(0.0, 0.0, -1.0), Vector2(9.0, 2.0))
-	return center + Vector3(0.0, 0.9, 2.2)
+	return center + Vector3(0.0, 0.9, 3.4)
 
 ## Кузница: настил и столбы из городского кита, горн с жаровней и наковальня
 ## своей геометрией — готового горна ни в одном ките нет.
 func _kit_forge(center: Vector3) -> Vector3:
 	var unit := VillageKit.KIT_SCALE
 	var cell := center / unit
-	for x: int in 3:
-		for z: int in 2:
-			kit.piece("planks", cell + Vector3(float(x) - 1.0, 0.0, float(z) - 0.5))
-	for sx: float in [-1.0, 1.0]:
-		for sz: float in [-0.5, 0.5]:
-			kit.piece("pillar-wood", cell + Vector3(sx, 0.0, sz))
-			kit.piece("pillar-wood", cell + Vector3(sx, 1.0, sz))
-	_kit_roof(center + Vector3(0.0, 2.0 * unit, 0.0), Vector2(3.2, 2.4), 1.5, WOOD_DARK)
+	# Навес собирает тот же генератор, что и дома: единый материал и один скат.
+	kit.builder().shelter(center, Vector2(3.0, 2.4) * unit, atan2(-center.x, -center.z))
 	# Горн, труба и угли.
 	var hearth := center + Vector3(0.0, 0.0, -2.4)
-	box(Vector3(2.6, 1.3, 1.8), hearth + Vector3(0.0, 0.65, 0.0), STONE, true)
-	kit.piece("fire-basket", (hearth + Vector3(0.0, 1.3, 0.0)) / unit, 0, VillageKit.GRAVE)
-	glow(Vector3(1.6, 0.2, 1.0), hearth + Vector3(0.0, 1.5, 0.0), Color(1.0, 0.45, 0.12), 3.4)
-	kit.piece("chimney", (hearth + Vector3(0.0, 1.3, 0.0)) / unit, 1)
-	lamp(hearth + Vector3(0.0, 2.0, 0.8), Color(1.0, 0.55, 0.2), 3.2, 12.0)
+	kit.gear().forge_hearth(Vector2(hearth.x, hearth.z), atan2(-center.x, -center.z))
+	# Горн и труба своей геометрией: модели кита рядом с навесом выбивались.
 	# Наковальня — точка взаимодействия.
 	var anvil := center + Vector3(0.0, 0.0, 0.4)
-	box(Vector3(0.7, 0.6, 0.7), anvil + Vector3(0.0, 0.4, 0.0), STONE_DARK, true)
-	box(Vector3(1.5, 0.35, 0.6), anvil + Vector3(0.0, 0.87, 0.0), METAL)
-	kit.piece("cart", (center + Vector3(4.2, 0.0, 1.6)) / unit, 1)
-	kit.piece("wheel", (center + Vector3(-4.0, 0.0, 1.8)) / unit)
-	kit.piece("stall-bench", (center + Vector3(3.0, 0.0, -1.6)) / unit)
+	kit.gear().anvil(Vector2(anvil.x, anvil.z), atan2(-center.x, -center.z))
+	kit.gear().weapon_rack(Vector2(center.x + 2.6, center.z + 1.2), atan2(-center.z, center.x))
 	return anvil + Vector3(0.0, 0.9, 1.6)
 
 ## Общая призматическая крыша поверх кит-построек.
