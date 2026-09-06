@@ -6,7 +6,15 @@ enum Mode { LOADING, EXPLORE, COMBAT, DIALOG }
 
 const MOVE_SPEED := 4.5
 const SPRINT_MULT := 1.6
-const FOLLOW_GAP := 1.1
+## Строй отряда в локальных координатах лидера: «перёд» — это -Z, поэтому
+## спутники стоят по +Z. Ширина строя 2.6 м против коридора в 3 клетки (4.5 м) —
+## отряд идёт клином, а не гуськом.
+const FORMATION: Array[Vector3] = [
+	Vector3.ZERO,
+	Vector3(-1.3, 0.0, 0.9),
+	Vector3(1.3, 0.0, 0.9),
+	Vector3(0.0, 0.0, 1.9),
+]
 const INTERACT_RANGE := 2.2
 
 var service: RunService
@@ -26,7 +34,6 @@ var environment: WorldEnvironment
 var combat_controller: Node
 var hud: Control
 var minimap: Control
-var _trail: Array[Vector3] = []
 ## Аниматоры отряда в режиме исследования: держат клип ходьбы и стойки.
 var _walk_animators: Array[ActorAnimator] = []
 ## Круги под ногами: показывают, что герой — персонаж игрока.
@@ -86,7 +93,7 @@ func _spawn_party() -> void:
 		var member: CharacterState = service.run.party[i]
 		var node := _make_actor_node(member.data.display_name if member.data else "Герой",
 			member.data.tint if member.data else Color.WHITE, 1.8, member.hero_id)
-		node.position = start + Vector3(0.0, 0.0, i * 0.6)
+		node.position = start + _formation_offset(i)
 		add_child(node)
 		party_nodes.append(node)
 		_walk_animators.append(ActorAnimator.attach(node))
@@ -104,9 +111,7 @@ func _spawn_party() -> void:
 	torch_light.shadow_enabled = true   # единственный источник теней в кадре
 	torch_light.position = Vector3(0.4, 1.7, 0.5)   # факел над плечом, а не внутри груди
 	leader.add_child(torch_light)
-	_trail.clear()
-	for i: int in 64:
-		_trail.append(leader.global_position)
+	_update_followers(1.0)
 	_update_camera(0.0)
 
 ## Герои строятся отдельной моделью — силуэт должен отличаться от вражеского.
@@ -158,32 +163,34 @@ func _try_move(node: Node3D, motion: Vector3) -> void:
 	var vertical := Vector3(node.global_position.x, node.global_position.y, target.z)
 	if _walkable_at(vertical):
 		node.global_position.z = target.z
-	_trail.push_front(node.global_position)
-	if _trail.size() > 128:
-		_trail.resize(128)
 
 func _walkable_at(pos: Vector3) -> bool:
 	return plan.is_floor(FloorBuilder.world_to_cell(pos, cell_size))
 
 func _update_followers(delta: float) -> void:
+	var weight := clampf(delta * 5.0, 0.0, 1.0)
 	for i: int in range(1, party_nodes.size()):
 		var member: CharacterState = service.run.party[i]
 		var node := party_nodes[i]
 		node.visible = not member.is_dead_this_run
-		var index := mini(_trail.size() - 1, int(i * FOLLOW_GAP * 8))
-		var target: Vector3 = _trail[index]
-		var before := node.global_position
-		node.global_position = before.lerp(target, clampf(delta * 4.0, 0.0, 1.0))
-		_face_along(node, node.global_position - before)
+		node.global_position = node.global_position.lerp(_formation_slot(i), weight)
+		# Строй смотрит туда же, куда лидер: спутник, доворачивающийся по своему
+		# шагу, на месте разворачивался как попало.
+		node.rotation.y = lerp_angle(node.rotation.y, leader.rotation.y, weight)
 
-## Спутники разворачиваются по своему шагу: без этого они шли боком или спиной
-## вперёд, сохраняя разворот с момента появления.
-func _face_along(node: Node3D, motion: Vector3) -> void:
-	var flat := Vector2(motion.x, motion.z)
-	if flat.length_squared() < 0.000004:
-		return
-	var wanted := atan2(-motion.x, -motion.z)
-	node.rotation.y = lerp_angle(node.rotation.y, wanted, 0.35)
+## Место спутника в строю в мировых координатах.
+func _formation_slot(index: int) -> Vector3:
+	var offset := _formation_offset(index).rotated(Vector3.UP, leader.rotation.y)
+	# На повороте и в узком месте место в строю может уткнуться в стену — тогда
+	# спутник подтягивается ближе к лидеру, вплоть до его собственной клетки.
+	for factor: float in [1.0, 0.66, 0.33]:
+		var candidate := leader.global_position + offset * factor
+		if _walkable_at(candidate):
+			return candidate
+	return leader.global_position
+
+func _formation_offset(index: int) -> Vector3:
+	return FORMATION[index] if index < FORMATION.size() else FORMATION[FORMATION.size() - 1]
 
 func _update_camera(delta: float) -> void:
 	if camera == null or leader == null:
