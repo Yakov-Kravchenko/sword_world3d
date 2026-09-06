@@ -133,7 +133,7 @@ static func _apply_to_target(state: CombatState, caster: CombatActor, spell: Spe
 		var amount: int = int(roll["total"])
 		if halved:
 			amount = int(floor(amount / 2.0))
-		if state.dev_damage > 0:
+		if state.dev_damage > 0 and caster.is_hero:
 			amount = state.dev_damage
 		var event := DamageCalc.deal(target, amount, spell.damage_type, crit, state.balance)
 		result.damage_events.append(event)

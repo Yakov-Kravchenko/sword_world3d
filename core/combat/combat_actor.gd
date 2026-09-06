@@ -55,6 +55,9 @@ var action_left: int = 0
 var bonus_left: int = 0
 var reaction_left: int = 0
 
+## Отладочная неуязвимость: любой урон гасится в ноль. Ставится игровым слоем
+## для режима разработчика — core про этот режим ничего не знает.
+var invulnerable: bool = false
 var is_down: bool = false
 var is_dead: bool = false
 var has_fled: bool = false

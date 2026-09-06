@@ -51,7 +51,6 @@ func _build_state(encounter: Dictionary) -> void:
 	state.spell_db = Database.spell_map()
 	service.run.combat_index += 1
 	state.combat_index = service.run.combat_index
-	state.dev_damage = GameState.DEV_DAMAGE if GameState.dev_mode else 0
 	state.rng = service.run.stream(&"combat", service.run.combat_index)
 	var area := room.rect.grow(1)
 	state.grid = plan.build_combat_grid(area)
@@ -83,6 +82,7 @@ func _build_state(encounter: Dictionary) -> void:
 			service.run.stats["bosses"] = int(service.run.stats.get("bosses", 0)) + 1
 	if service.run.torch_lit:
 		state.light.add_source(state.team_actors(CombatActor.TEAM_PARTY)[0].cell)
+	apply_dev_mode()
 
 ## Ближайшая свободная клетка к якорю — простое, но детерминированное размещение.
 func _closest_free(free: Array[Vector2i], anchor: Vector2i, actor: CombatActor) -> Vector2i:
@@ -717,8 +717,11 @@ static func _spell_color(spell: SpellData) -> Color:
 func _highlight_turn(actor_id: StringName) -> void:
 	run_scene.set_active_ring(actor_id)
 
-## Переключение режима разработчика на ходу: бой берёт урон из состояния при
-## каждом ударе, поэтому достаточно обновить число.
+## Переключение режима разработчика на ходу: бой читает и урон, и неуязвимость
+## из состояния при каждом ударе, поэтому достаточно обновить значения.
 func apply_dev_mode() -> void:
-	if state != null:
-		state.dev_damage = GameState.DEV_DAMAGE if GameState.dev_mode else 0
+	if state == null:
+		return
+	state.dev_damage = GameState.DEV_DAMAGE if GameState.dev_mode else 0
+	for actor: CombatActor in state.team_actors(CombatActor.TEAM_PARTY, false):
+		actor.invulnerable = GameState.dev_mode

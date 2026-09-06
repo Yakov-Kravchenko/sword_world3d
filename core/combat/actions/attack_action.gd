@@ -102,7 +102,9 @@ static func _apply_damage(state: CombatState, actor: CombatActor, target: Combat
 	if attack.adds_stat_to_damage and attack.attack_stat != &"":
 		total += actor.stat_mod(attack.attack_stat)
 	total += int(actor.modifier(&"damage"))
-	if state.dev_damage > 0:
+	# Отладочный урон — только у своих: если его получают и враги, первый же
+	# скелет снимает героя, и режим становится непригоден для проверок.
+	if state.dev_damage > 0 and actor.is_hero:
 		total = state.dev_damage
 	var event := DamageCalc.deal(target, maxi(0, total), attack.damage_type, crit, state.balance)
 	result.damage_events.append(event)

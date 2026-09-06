@@ -90,10 +90,8 @@ func refresh() -> void:
 	_resource_label.text = "Добыча забега: %d золота" % run.run_gold
 	if not mats.is_empty():
 		_resource_label.text += " · " + ", ".join(mats)
-	# Про 999 у врагов пишем прямо: иначе первый же скелет сносит героя, и это
-	# выглядит как баг, а не как включённый режим.
 	_dev_label.visible = GameState.dev_mode
-	_dev_label.text = "F1 — режим разработчика: любая атака, и своя и вражеская, наносит %d" % GameState.DEV_DAMAGE
+	_dev_label.text = "F1 — режим разработчика: атаки отряда наносят %d, отряд неуязвим" % GameState.DEV_DAMAGE
 	_rebuild_party()
 
 func _update_torch() -> void:

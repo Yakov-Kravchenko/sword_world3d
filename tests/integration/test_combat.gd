@@ -141,3 +141,23 @@ func test_dev_damage_kills_in_one_hit() -> void:
 	var plain := BattleSimulator.run(without)
 	assert_gt(float(int(plain["rounds"])), float(int(result["rounds"])),
 		"без режима тот же бой идёт дольше")
+
+## Отладочная неуязвимость: отряд не теряет ни хита, даже если бой затягивается.
+func test_invulnerable_party_takes_no_damage() -> void:
+	var party := _party(1)
+	var state := BattleSimulator.build_state(party,
+		_enemies([&"skeleton_warrior", &"bone_archer", &"ghoul"], 8), balance, statuses, 2024)
+	state.spell_db = spells
+	var before := 0
+	for actor: CombatActor in state.team_actors(CombatActor.TEAM_PARTY, false):
+		actor.invulnerable = true
+		before += actor.hp
+	var result := BattleSimulator.run(state)
+	var after := 0
+	var downed := false
+	for actor: CombatActor in state.team_actors(CombatActor.TEAM_PARTY, false):
+		after += actor.hp
+		downed = downed or actor.is_down or actor.is_dead
+	assert_eq(after, before, "неуязвимый отряд не теряет хитов")
+	assert_false(downed, "никто не падает при смерти")
+	assert_true(result.has("rounds"), "бой доигран до конца")

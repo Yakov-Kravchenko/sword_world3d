@@ -28,6 +28,11 @@ static func deal(target: CombatActor, raw: int, type: StringName, crit: bool,
 		balance: BalanceData) -> Dictionary:
 	var mods := apply_type_modifiers(target, raw, type)
 	var amount: int = mods["amount"]
+	# Неуязвимость гасится здесь, а не у источников урона: через deal проходят и
+	# атаки, и заклинания, и тик статуса — иначе «бессмертного» добил бы яд.
+	if target.invulnerable:
+		amount = 0
+		mods["immune"] = true
 	var event := {
 		"target": String(target.id), "amount": amount, "type": String(type), "crit": crit,
 		"raw": raw, "immune": mods["immune"], "resisted": mods["resisted"],

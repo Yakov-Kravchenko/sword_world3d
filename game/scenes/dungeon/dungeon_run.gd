@@ -428,10 +428,7 @@ func _spring_chest_trap(index: int) -> void:
 	var victim: CharacterState = rng.pick(service.run.alive_party())
 	if victim == null:
 		return
-	var damage := int(Dice.roll("1d6", rng)["total"]) + service.run.floor_index
-	victim.hp = maxi(0, victim.hp - damage)
-	if victim.hp <= 0:
-		victim.is_dead_this_run = true
+	var damage := _hurt_hero(victim, int(Dice.roll("1d6", rng)["total"]) + service.run.floor_index)
 	EventBus.notify("Игла в замке: %s получает %d урона" % [_hero_name(victim), damage])
 
 func _collect_loot(loot: Dictionary) -> void:
@@ -497,10 +494,7 @@ func _disarm_trap(prop: Dictionary) -> void:
 	if bool(check["success"]):
 		EventBus.notify("%s обезвредил ловушку. %s" % [actor.display_name, check["text"]])
 		return
-	var damage := int(Dice.roll("2d6", rng)["total"]) + service.run.floor_index
-	best.hp = maxi(0, best.hp - damage)
-	if best.hp <= 0:
-		best.is_dead_this_run = true
+	var damage := _hurt_hero(best, int(Dice.roll("2d6", rng)["total"]) + service.run.floor_index)
 	EventBus.notify("Ловушка сработала: %s получает %d урона" % [actor.display_name, damage])
 	hud.refresh()
 
@@ -528,8 +522,7 @@ func _menu_event(prop: Dictionary) -> void:
 				EventBus.notify("В нише лежит: %s" % item.display_name())
 			var toll := _best_hero(Stats.CON)
 			if toll != null:
-				var loss := maxi(1, int(toll.hp * 0.25))
-				toll.hp = maxi(1, toll.hp - loss)
+				var loss := _hurt_hero(toll, maxi(1, int(toll.hp * 0.25)), 1)
 				EventBus.notify("Что-то взяло своё: %s теряет %d хитов" % [_hero_name(toll), loss])
 			_spend_prop(index), "Предмет, но кто-то из отряда заплатит четвертью хитов"),
 	]
@@ -652,3 +645,16 @@ func _toggle_dev_mode() -> void:
 	hud.refresh()
 	EventBus.notify("Режим разработчика %s." % ("включён" if GameState.dev_mode else "выключен"))
 	Log.info("dev_mode=%s" % GameState.dev_mode)
+
+## Урон герою вне боя: ловушки, иглы в замках, плата за находку. В режиме
+## разработчика отряд бессмертен, и гасить урон надо здесь тоже — в бою за это
+## отвечает CombatActor.invulnerable, но сюда бой не заходит.
+## floor_hp — нижняя граница здоровья: у платы за находку она равна 1, такой
+## урон не убивает и без всякого режима. Возвращает урон, который реально прошёл.
+func _hurt_hero(victim: CharacterState, damage: int, floor_hp: int = 0) -> int:
+	if victim == null or GameState.dev_mode:
+		return 0
+	victim.hp = maxi(floor_hp, victim.hp - damage)
+	if victim.hp <= 0:
+		victim.is_dead_this_run = true
+	return damage
